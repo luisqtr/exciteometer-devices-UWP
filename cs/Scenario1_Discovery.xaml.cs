@@ -65,7 +65,7 @@ namespace SDKTemplate
             else
             {
                 StopBleDeviceWatcher();
-                EnumerateButton.Content = "Start enumerating";
+                EnumerateButton.Content = "Enumerate Devices";
                 rootPage.NotifyUser($"Device watcher stopped.", NotifyType.StatusMessage);
             }
         }
@@ -314,6 +314,41 @@ namespace SDKTemplate
 
             isBusy = false;
         }
+
+        private void ContinueButton_Click()
+        {
+            // Do not allow a new Pair operation to start if an existing one is in progress.
+            if (isBusy)
+            {
+                return;
+            }
+
+            isBusy = true;
+
+            // Capture the current selected item in case the user changes it while we are pairing.
+            var bleDeviceDisplay = ResultsListView.SelectedItem as BluetoothLEDeviceDisplay;
+
+            if(!bleDeviceDisplay.IsPaired)
+            {
+                rootPage.NotifyUser($"Please pair the device before continuing", NotifyType.ErrorMessage);
+            }
+
+            Debug.WriteLine($"bleDeviceDisplay.Id = {bleDeviceDisplay.Id}\nbleDeviceDisplay.Name = {bleDeviceDisplay.Name}");
+
+            if(bleDeviceDisplay.Name.StartsWith("Polar H10"))
+            {
+                // Open Page to connect to Polar H10
+                MainPage.Current.OpenSetupForPolarH10();
+            }
+            else
+            {
+                // Open normal connection to BLE Server
+                MainPage.Current.OpenSetupConnectToServer();
+            }
+
+            isBusy = false;
+        }
+
 
         #endregion
     }

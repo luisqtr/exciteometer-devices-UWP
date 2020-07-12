@@ -11,7 +11,7 @@
     <OutputType>AppContainerExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>SDKTemplate</RootNamespace>
-    <AssemblyName>BluetoothLEUniversal</AssemblyName>
+    <AssemblyName>BluetoothLE_Setup</AssemblyName>
     <DefaultLanguage>en-US</DefaultLanguage>
     <TargetPlatformIdentifier>UAP</TargetPlatformIdentifier>
     <TargetPlatformVersion>10.0.18362.0</TargetPlatformVersion>
@@ -115,6 +115,9 @@
     <Compile Include="Scenario2_Client.xaml.cs">
       <DependentUpon>Scenario2_Client.xaml</DependentUpon>
     </Compile>
+    <Compile Include="ScenarioPolarH10.xaml.cs">
+      <DependentUpon>ScenarioPolarH10.xaml</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest">
@@ -152,6 +155,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="ScenarioPolarH10.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
   </ItemGroup>
   <ItemGroup>
     <Content Include="$(SharedContentDir)\cs\Default.rd.xml">
@@ -175,9 +182,10 @@
     <Content Include="$(SharedContentDir)\media\tile-sdk.png">
       <Link>Assets\tile-sdk.png</Link>
     </Content>
-    <Content Include="$(SharedContentDir)\media\windows-sdk.png">
+    <Content Include="D:\Ludwig\Empresas\GIT-repos\XR4ALL\3rd_party\Bluetooth_Low_Energy_sample\SharedContent\media\windows-sdk.png">
       <Link>Assets\windows-sdk.png</Link>
     </Content>
+    <Content Include="Media\exciteometer_logo.png" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NETCore.UniversalWindowsPlatform">

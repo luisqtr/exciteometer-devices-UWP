@@ -11,6 +11,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Windows.UI.Core;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Automation.Peers;
@@ -82,6 +83,23 @@ namespace SDKTemplate
                     Splitter.IsPaneOpen = false;
                 }
             }
+        }
+
+        /// <summary>
+        /// Open the PolarH10 page immediately from the first page
+        /// </summary>
+        public void OpenSetupForPolarH10()
+        {
+            // Index of the page that contains the setup for Polar
+            ScenarioControl.SelectedIndex = 2;
+        }
+
+        /// <summary>
+        /// Open Next Page
+        /// </summary>
+        public void OpenSetupConnectToServer()
+        {
+            ScenarioControl.SelectedIndex = 1;
         }
 
         public List<Scenario> Scenarios

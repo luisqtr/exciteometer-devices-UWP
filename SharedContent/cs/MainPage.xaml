@@ -39,7 +39,7 @@
                         </ListBox.ItemTemplate>
                     </ListBox>
                     <StackPanel x:Name="FooterPanel" Orientation="Vertical" RelativePanel.AlignBottomWithPanel="True">
-                        <Image Source="Assets/microsoft-sdk.png" AutomationProperties.Name="Microsoft Logo" Stretch="None" HorizontalAlignment="Left" Margin="10,0,0,0"/>
+                        <!--<Image Source="Assets/microsoft-sdk.png" AutomationProperties.Name="Microsoft Logo" Stretch="None" HorizontalAlignment="Left" Margin="10,0,0,0"/>
                         <TextBlock x:Name="Copyright" Text="&#xA9; Microsoft Corporation. All rights reserved." Style="{StaticResource CopyrightTextStyle}"
                                    RelativePanel.Above="LinksPanel" Margin="10,10,0,0"
                                    TextWrapping="Wrap"/>
@@ -48,7 +48,7 @@
                         Click="Footer_Click" FontSize="12" Style="{StaticResource HyperlinkStyle}" />
                             <TextBlock Text="|"  Style="{StaticResource SeparatorStyle}" VerticalAlignment="Center" />
                             <HyperlinkButton x:Name="PrivacyLink" Content="Privacy" Tag="http://privacy.microsoft.com" Click="Footer_Click" FontSize="12" Style="{StaticResource HyperlinkStyle}"/>
-                        </StackPanel>
+                        </StackPanel>-->
                     </StackPanel>
                 </RelativePanel>
             </SplitView.Pane>
@@ -77,8 +77,8 @@
             <!-- Use AutomationProperties.AccessibilityView to let a screen reader know that the image is purely decorative.
                  (If the Image conveyed useful information we'd not use AccessibilityView, but instead provide a localized 
                  name for the Image to convey its purpose.) -->
-            <Image x:Name="WindowsLogo" Stretch="None" Source="Assets/windows-sdk.png" Margin="0,15,0,0" AutomationProperties.AccessibilityView="Raw" />
-            <TextBlock x:Name="Header" Text="Universal Windows Platform sample" Style="{StaticResource TagLineTextStyle}" Margin="0,15,0,0" />
+            <Image x:Name="WindowsLogo" Stretch="Fill" Width="30" Height="30" Source="Media/exciteometer_logo.png" Margin="0,0,0,0" AutomationProperties.AccessibilityView="Raw" />
+            <TextBlock x:Name="Header" Text="Universal Windows Platform sample" Style="{StaticResource TagLineTextStyle}" Margin="0,10,0,0" />
         </StackPanel>
     </Grid>
 </Page>

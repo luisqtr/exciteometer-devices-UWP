@@ -51,11 +51,11 @@ namespace SDKTemplate
         readonly int E_DEVICE_NOT_AVAILABLE = unchecked((int)0x800710df); // HRESULT_FROM_WIN32(ERROR_DEVICE_NOT_AVAILABLE)
         #endregion
 
-        readonly int START_ACC = unchecked((int)0x02020001C8000101100002010800);
+        //readonly int START_ACC = unchecked((int)0x02020001C8000101100002010800);
         readonly int STOP_ACC = unchecked((int)0x0302);
 
 
-        readonly int START_ECG = unchecked((int)0x02000001820001010E00);
+        //readonly int START_ECG = unchecked((int)0x02000001820001010E00);
         readonly int STOP_ECG = unchecked((int)0x0300);
 
 
