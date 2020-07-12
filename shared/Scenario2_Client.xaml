@@ -40,6 +40,8 @@
                         Visibility="Collapsed" Margin="0,10,10,0"/>
                 <Button x:Name="ValueChangedSubscribeToggle" Content="Subscribe to value changes" Click="{x:Bind ValueChangedSubscribeToggle_Click}"
                         Visibility="Collapsed" Margin="0,10,10,0"/>
+                <Button x:Name="ValueChangedIndicateToggle" Content="Indicate to value changes" Click="{x:Bind ValueChangedIndicateToggle_Click}"
+                        Visibility="Collapsed" Margin="0,10,10,0"/>
             </StackPanel>
             <StackPanel x:Name="CharacteristicWritePanel" Margin="0,10,0,0" Visibility="Collapsed">
                 <TextBox x:Name="CharacteristicWriteValue" PlaceholderText="Enter text/number to send"/>

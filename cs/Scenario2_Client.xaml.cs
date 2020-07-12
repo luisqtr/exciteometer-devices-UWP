@@ -36,9 +36,11 @@ namespace SDKTemplate
         private MainPage rootPage = MainPage.Current;
 
         private BluetoothLEDevice bluetoothLeDevice = null;
+        private GattSession gattSession = null;
         private GattCharacteristic selectedCharacteristic;
 
         // Only one registered characteristic at a time.
+        private GattCharacteristic indicatedCharacteristic;
         private GattCharacteristic registeredCharacteristic;
         private GattPresentationFormat presentationFormat;
 
@@ -48,6 +50,14 @@ namespace SDKTemplate
         readonly int E_ACCESSDENIED = unchecked((int)0x80070005);
         readonly int E_DEVICE_NOT_AVAILABLE = unchecked((int)0x800710df); // HRESULT_FROM_WIN32(ERROR_DEVICE_NOT_AVAILABLE)
         #endregion
+
+        readonly int START_ACC = unchecked((int)0x02020001C8000101100002010800);
+        readonly int STOP_ACC = unchecked((int)0x0302);
+
+
+        readonly int START_ECG = unchecked((int)0x02000001820001010E00);
+        readonly int STOP_ECG = unchecked((int)0x0300);
+
 
         #region UI Code
         public Scenario2_Client()
@@ -91,6 +101,20 @@ namespace SDKTemplate
                     subscribedForNotifications = false;
                 }
             }
+            if (subscribedForIndications)
+            {
+                // Need to clear the CCCD from the remote device so we stop receiving indications
+                var result = await indicatedCharacteristic.WriteClientCharacteristicConfigurationDescriptorAsync(GattClientCharacteristicConfigurationDescriptorValue.None);
+                if (result != GattCommunicationStatus.Success)
+                {
+                    return false;
+                }
+                else
+                {
+                    selectedCharacteristic.ValueChanged -= Characteristic2_ValueChanged;
+                    subscribedForIndications = false;
+                }
+            }
             bluetoothLeDevice?.Dispose();
             bluetoothLeDevice = null;
             return true;
@@ -127,6 +151,10 @@ namespace SDKTemplate
                 // Note: BluetoothLEDevice.GattServices property will return an empty list for unpaired devices. For all uses we recommend using the GetGattServicesAsync method.
                 // BT_Code: GetGattServicesAsync returns a list of all the supported services of the device (even if it's not paired to the system).
                 // If the services supported by the device are expected to change during BT usage, subscribe to the GattServicesChanged event.
+                gattSession = await GattSession.FromDeviceIdAsync(bluetoothLeDevice.BluetoothDeviceId);
+
+                System.Diagnostics.Debug.WriteLine("GattSession MTU (MaxPduSize): " + gattSession.MaxPduSize);
+
                 GattDeviceServicesResult result = await bluetoothLeDevice.GetGattServicesAsync(BluetoothCacheMode.Uncached);
 
                 if (result.Status == GattCommunicationStatus.Success)
@@ -227,6 +255,28 @@ namespace SDKTemplate
             }
         }
 
+        private void AddValue2ChangedHandler()
+        {
+            ValueChangedIndicateToggle.Content = "Unsubscribe from indication changes";
+            if (!subscribedForIndications)
+            {
+                indicatedCharacteristic = selectedCharacteristic;
+                indicatedCharacteristic.ValueChanged += Characteristic2_ValueChanged;
+                subscribedForIndications = true;
+            }
+        }
+
+        private void RemoveValue2ChangedHandler()
+        {
+            ValueChangedIndicateToggle.Content = "Subscribe to indication changes";
+            if (subscribedForIndications)
+            {
+                indicatedCharacteristic.ValueChanged -= Characteristic2_ValueChanged;
+                indicatedCharacteristic = null;
+                subscribedForIndications = false;
+            }
+        }
+
         private async void CharacteristicList_SelectionChanged()
         {
             selectedCharacteristic = (GattCharacteristic)((ComboBoxItem)CharacteristicList.SelectedItem)?.Tag;
@@ -284,6 +334,7 @@ namespace SDKTemplate
             SetVisibility(ValueChangedSubscribeToggle, properties.HasFlag(GattCharacteristicProperties.Indicate) ||
                                                        properties.HasFlag(GattCharacteristicProperties.Notify));
 
+            SetVisibility(ValueChangedIndicateToggle, properties.HasFlag(GattCharacteristicProperties.Indicate));
         }
 
 
@@ -422,10 +473,10 @@ namespace SDKTemplate
             }
         }
 
-        private bool subscribedForNotifications = false;
-        private async void ValueChangedSubscribeToggle_Click()
+        private bool subscribedForIndications = false;
+        private async void ValueChangedIndicateToggle_Click()
         {
-            if (!subscribedForNotifications)
+            if (!subscribedForIndications)
             {
                 // initialize status
                 GattCommunicationStatus status = GattCommunicationStatus.Unreachable;
@@ -435,7 +486,67 @@ namespace SDKTemplate
                     cccdValue = GattClientCharacteristicConfigurationDescriptorValue.Indicate;
                 }
 
-                else if (selectedCharacteristic.CharacteristicProperties.HasFlag(GattCharacteristicProperties.Notify))
+                try
+                {
+                    // BT_Code: Must write the CCCD in order for server to send indications.
+                    // We receive them in the ValueChanged event handler.
+                    status = await selectedCharacteristic.WriteClientCharacteristicConfigurationDescriptorAsync(cccdValue);
+
+                    if (status == GattCommunicationStatus.Success)
+                    {
+                        AddValue2ChangedHandler();
+                        rootPage.NotifyUser("Successfully subscribed for indication changes", NotifyType.StatusMessage);
+                    }
+                    else
+                    {
+                        rootPage.NotifyUser($"Error registering for indication changes: {status}", NotifyType.ErrorMessage);
+                    }
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    // This usually happens when a device reports that it support indicate, but it actually doesn't.
+                    rootPage.NotifyUser(ex.Message, NotifyType.ErrorMessage);
+                }
+            }
+            else
+            {
+                try
+                {
+                    // BT_Code: Must write the CCCD in order for server to send notifications.
+                    // We receive them in the ValueChanged event handler.
+                    // Note that this sample configures either Indicate or Notify, but not both.
+                    var result = await
+                            selectedCharacteristic.WriteClientCharacteristicConfigurationDescriptorAsync(
+                                GattClientCharacteristicConfigurationDescriptorValue.None);
+                    if (result == GattCommunicationStatus.Success)
+                    {
+                        subscribedForIndications = false;
+                        RemoveValue2ChangedHandler();
+                        rootPage.NotifyUser("Successfully un-registered for indications", NotifyType.StatusMessage);
+                    }
+                    else
+                    {
+                        rootPage.NotifyUser($"Error un-registering for indications: {result}", NotifyType.ErrorMessage);
+                    }
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    // This usually happens when a device reports that it support notify, but it actually doesn't.
+                    rootPage.NotifyUser(ex.Message, NotifyType.ErrorMessage);
+                }
+            }
+        }
+
+        private bool subscribedForNotifications = false;
+        private async void ValueChangedSubscribeToggle_Click()
+        {
+            if (!subscribedForNotifications)
+            {
+                // initialize status
+                GattCommunicationStatus status = GattCommunicationStatus.Unreachable;
+                var cccdValue = GattClientCharacteristicConfigurationDescriptorValue.None;
+                
+                if (selectedCharacteristic.CharacteristicProperties.HasFlag(GattCharacteristicProperties.Notify))
                 {
                     cccdValue = GattClientCharacteristicConfigurationDescriptorValue.Notify;
                 }
@@ -491,12 +602,25 @@ namespace SDKTemplate
             }
         }
 
+
+
+
         private async void Characteristic_ValueChanged(GattCharacteristic sender, GattValueChangedEventArgs args)
         {
             // BT_Code: An Indicate or Notify reported that the value has changed.
             // Display the new value with a timestamp.
             var newValue = FormatValueByPresentation(args.CharacteristicValue, presentationFormat);
             var message = $"Value at {DateTime.Now:hh:mm:ss.FFF}: {newValue}";
+            await Dispatcher.RunAsync(CoreDispatcherPriority.Normal,
+                () => CharacteristicLatestValue.Text = message);
+        }
+
+        private async void Characteristic2_ValueChanged(GattCharacteristic sender, GattValueChangedEventArgs args)
+        {
+            // BT_Code: An Indicate or Notify reported that the value has changed.
+            // Display the new value with a timestamp.
+            var newValue = FormatValueByPresentation(args.CharacteristicValue, presentationFormat);
+            var message = $"Value CHAR2 at {DateTime.Now:hh:mm:ss.FFF}: {newValue}";
             await Dispatcher.RunAsync(CoreDispatcherPriority.Normal,
                 () => CharacteristicLatestValue.Text = message);
         }
