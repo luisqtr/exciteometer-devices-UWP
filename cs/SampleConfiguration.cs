@@ -26,7 +26,7 @@ namespace SDKTemplate
             new Scenario() { Title="Discover servers", ClassType=typeof(Scenario1_Discovery) },
             new Scenario() { Title="Connect to a server", ClassType=typeof(Scenario2_Client) },
             new Scenario() { Title="Setup Polar H10", ClassType=typeof(ScenarioPolarH10) },
-            new Scenario() { Title="Server Foreground", ClassType=typeof(Scenario3_ServerForeground) },
+            // new Scenario() { Title="Server Foreground", ClassType=typeof(Scenario3_ServerForeground) },
         };
 
         public string SelectedBleDeviceId;

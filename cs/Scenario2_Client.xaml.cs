@@ -51,14 +51,6 @@ namespace SDKTemplate
         readonly int E_DEVICE_NOT_AVAILABLE = unchecked((int)0x800710df); // HRESULT_FROM_WIN32(ERROR_DEVICE_NOT_AVAILABLE)
         #endregion
 
-        //readonly int START_ACC = unchecked((int)0x02020001C8000101100002010800);
-        readonly int STOP_ACC = unchecked((int)0x0302);
-
-
-        //readonly int START_ECG = unchecked((int)0x02000001820001010E00);
-        readonly int STOP_ECG = unchecked((int)0x0300);
-
-
         #region UI Code
         public Scenario2_Client()
         {
@@ -728,28 +720,6 @@ namespace SDKTemplate
         /// <returns>The heart rate measurement value.</returns>
         private static ushort ParseHeartRateValue(byte[] data)
         {
-
-            /*To get the rr-interval you have to read the flags from the first byte you receive. You read the flags as binary from right to left.
-                bit 0 = 0: Heart Rate Value Format is set to UINT8.Units:BPM(1 byte).
-                bit 0 = 1: Heart Rate Value Format is set to UINT16.Units:BPM(2 bytes).
-
-                bit 1 and 2: Sensor Contact Status bits. These are not relevant for this.
-
-                bit 3 = 0: Energy Expended field is not present.
-                bit 3 = 1: Energy Expended field is present.Format = uint16.Units: kilo Joules.
-
-                bit 4 = 0: RR - Interval values are not present.
-                bit 4 = 1: One or more RR - Interval values are present.Format = uint16.unit 1 / 1024 sec.
-
-                bit 5, 6 and 7: reserved for future use.
-
-            If your first byte for example = 16 = 0x10 = 0b00010000 then byte 2 = is heart rate.
-                Byte 3 and 4 are the rr - interval.
-                Byte 5 and 6(if present) rr - interval.
-            */
-
-         System.Diagnostics.Debug.WriteLine("Parsing HR Value: " + BitConverter.ToString(data));
-
             // Heart Rate profile defined flag values
             const byte heartRateValueFormat = 0x01;
 

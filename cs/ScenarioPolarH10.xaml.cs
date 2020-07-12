@@ -1,20 +1,20 @@
 //*********************************************************
 //
-// Copyright (c) Microsoft. All rights reserved.
-// This code is licensed under the MIT License (MIT).
-// THIS CODE IS PROVIDED *AS IS* WITHOUT WARRANTY OF
-// ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING ANY
-// IMPLIED WARRANTIES OF FITNESS FOR A PARTICULAR
-// PURPOSE, MERCHANTABILITY, OR NON-INFRINGEMENT.
+// Author: Luis Quintero
+// Date: 10/07/2020
+// Project: Excite-O-Meter / XR4ALL
 //
 //*********************************************************
+
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Text;
 using System.Threading.Tasks;
-using Windows.ApplicationModel.Core;
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Bluetooth.GenericAttributeProfile;
-using Windows.Foundation;
+using Windows.Devices.Enumeration;
+using Windows.Security.Cryptography;
 using Windows.Storage.Streams;
 using Windows.UI.Core;
 using Windows.UI.Xaml;
@@ -23,40 +23,45 @@ using Windows.UI.Xaml.Navigation;
 
 namespace SDKTemplate
 {
+    // This scenario connects to the device selected in the "Discover
+    // GATT Servers" scenario and communicates with it.
+    // Note that this scenario is rather artificial because it communicates
+    // with an unknown service with unknown characteristics.
+    // In practice, your app will be interested in a specific service with
+    // a specific characteristic.
     public sealed partial class ScenarioPolarH10 : Page
     {
         private MainPage rootPage = MainPage.Current;
 
-        GattServiceProvider serviceProvider;
+        private BluetoothLEDevice bluetoothLeDevice = null;
+        //private GattSession gattSession = null;
 
-        private GattLocalCharacteristic op1Characteristic;
-        private int operand1Received = 0;
+        private GattDeviceService BatteryService;
+        private GattDeviceService PmdService;
+        private GattDeviceService HrmService;
 
-        private GattLocalCharacteristic op2Characteristic;
-        private int operand2Received = 0;
+        // Stores characteristics while searching
+        IReadOnlyList<GattCharacteristic> temp_characteristics = null;
 
-        private GattLocalCharacteristic operatorCharacteristic;
-        CalculatorOperators operatorReceived = 0;
+        private GattCharacteristic BatteryLevelCharacteristic;
+        private GattCharacteristic HeartRateMeasurementCharacteristic;
+        private GattCharacteristic PmdControlPointCharacteristic;
+        private GattCharacteristic PmdDataCharacteristic;
 
-        private GattLocalCharacteristic resultCharacteristic;
-        private int resultVal = 0;
+        // Flags for indication and notification
+        private bool subscribedForNotification_Hrm = false;
+        private bool subscribedForIndications_PmdCP = false;
+        private bool subscribedForNotifications_PmdData = false;
 
-        private bool peripheralSupported;
+        private GattPresentationFormat presentationFormat;
 
-        private enum CalculatorCharacteristics
-        {
-            Operand1 = 1,
-            Operand2 = 2,
-            Operator = 3
-        }
+        #region Error Codes
+        readonly int E_BLUETOOTH_ATT_WRITE_NOT_PERMITTED = unchecked((int)0x80650003);
+        readonly int E_BLUETOOTH_ATT_INVALID_PDU = unchecked((int)0x80650004);
+        readonly int E_ACCESSDENIED = unchecked((int)0x80070005);
+        readonly int E_DEVICE_NOT_AVAILABLE = unchecked((int)0x800710df); // HRESULT_FROM_WIN32(ERROR_DEVICE_NOT_AVAILABLE)
+        #endregion
 
-        private enum CalculatorOperators
-        {
-            Add = 1,
-            Subtract = 2,
-            Multiply = 3,
-            Divide = 4
-        }
 
         #region UI Code
         public ScenarioPolarH10()
@@ -64,387 +69,774 @@ namespace SDKTemplate
             InitializeComponent();
         }
 
-        protected override async void OnNavigatedTo(NavigationEventArgs e)
+        protected override void OnNavigatedTo(NavigationEventArgs e)
         {
-            peripheralSupported = await CheckPeripheralRoleSupportAsync();
-            if (peripheralSupported)
+            SelectedDeviceRun.Text = rootPage.SelectedBleDeviceName;
+            if (string.IsNullOrEmpty(rootPage.SelectedBleDeviceId))
             {
-                ServerPanel.Visibility = Visibility.Visible;
+                ConnectButton.IsEnabled = false;
+                rootPage.NotifyUser("Error: Please select a device in the first page", NotifyType.ErrorMessage);
             }
             else
             {
-                PeripheralWarning.Visibility = Visibility.Visible;
+                SetupConnectionPolarH10();
             }
         }
 
-        protected override void OnNavigatedFrom(NavigationEventArgs e)
+        protected override async void OnNavigatedFrom(NavigationEventArgs e)
         {
-            if (serviceProvider != null)
+            var success = await ClearBluetoothLEDeviceAsync();
+            if (!success)
             {
-                if (serviceProvider.AdvertisementStatus != GattServiceProviderAdvertisementStatus.Stopped)
-                {
-                    serviceProvider.StopAdvertising();
-                }
-                serviceProvider = null;
+                rootPage.NotifyUser("Error: Unable to reset app state", NotifyType.ErrorMessage);
             }
-        }
-
-        private async void PublishButton_ClickAsync()
-        {
-            // Server not initialized yet - initialize it and start publishing
-            if (serviceProvider == null)
-            {
-                var serviceStarted = await ServiceProviderInitAsync();
-                if (serviceStarted)
-                {
-                    rootPage.NotifyUser("Service successfully started", NotifyType.StatusMessage);
-                    PublishButton.Content = "Stop Service";
-                }
-                else
-                {
-                    rootPage.NotifyUser("Service not started", NotifyType.ErrorMessage);
-                }
-            }
-            else
-            {
-                // BT_Code: Stops advertising support for custom GATT Service 
-                serviceProvider.StopAdvertising();
-                serviceProvider = null;
-                PublishButton.Content = "Start Service";
-            }
-        }
-
-        private async void UpdateUX()
-        {
-            await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
-            {
-                switch (operatorReceived)
-                {
-                    case CalculatorOperators.Add:
-                        OperationText.Text = "+";
-                        break;
-                    case CalculatorOperators.Subtract:
-                        OperationText.Text = "-";
-                        break;
-                    case CalculatorOperators.Multiply:
-                        OperationText.Text = "*";
-                        break;
-                    case CalculatorOperators.Divide:
-                        OperationText.Text = "/";
-                        break;
-                    default:
-                        OperationText.Text = "INV";
-                        break;
-                }
-                Operand1Text.Text = operand1Received.ToString();
-                Operand2Text.Text = operand2Received.ToString();
-                resultVal = ComputeResult();
-                ResultText.Text = resultVal.ToString();
-            });
         }
         #endregion
 
-        private async Task<bool> CheckPeripheralRoleSupportAsync()
+        private async Task<bool> ClearBluetoothLEDeviceAsync()
         {
-            // BT_Code: New for Creator's Update - Bluetooth adapter has properties of the local BT radio.
-            var localAdapter = await BluetoothAdapter.GetDefaultAsync();
-
-            if (localAdapter != null)
+            if (subscribedForNotification_Hrm)
             {
-                return localAdapter.IsPeripheralRoleSupported;
-            }
-            else
-            {
-                // Bluetooth is not turned on 
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Uses the relevant Service/Characteristic UUIDs to initialize, hook up event handlers and start a service on the local system.
-        /// </summary>
-        /// <returns></returns>
-        private async Task<bool> ServiceProviderInitAsync()
-        {
-            // BT_Code: Initialize and starting a custom GATT Service using GattServiceProvider.
-            GattServiceProviderResult serviceResult = await GattServiceProvider.CreateAsync(Constants.CalcServiceUuid);
-            if (serviceResult.Error == BluetoothError.Success)
-            {
-                serviceProvider = serviceResult.ServiceProvider;
-            }
-            else
-            {
-                rootPage.NotifyUser($"Could not create service provider: {serviceResult.Error}", NotifyType.ErrorMessage);
-                return false;
+                // Need to clear the CCCD from the remote device so we stop receiving notifications
+                var result = await HeartRateMeasurementCharacteristic.WriteClientCharacteristicConfigurationDescriptorAsync(GattClientCharacteristicConfigurationDescriptorValue.None);
+                if (result != GattCommunicationStatus.Success)
+                {
+                    return false;
+                }
+                else
+                {
+                    HeartRateMeasurementCharacteristic.ValueChanged -= Characteristic_ValueChanged;
+                    subscribedForNotification_Hrm = false;
+                }
             }
 
-            GattLocalCharacteristicResult result = await serviceProvider.Service.CreateCharacteristicAsync(Constants.Op1CharacteristicUuid, Constants.gattOperandParameters);
-            if (result.Error == BluetoothError.Success)
+            if (subscribedForIndications_PmdCP)
             {
-                op1Characteristic = result.Characteristic;
-            }
-            else
-            {
-                rootPage.NotifyUser($"Could not create operand1 characteristic: {result.Error}", NotifyType.ErrorMessage);
-                return false;
-            }
-            op1Characteristic.WriteRequested += Op1Characteristic_WriteRequestedAsync;
-
-            result = await serviceProvider.Service.CreateCharacteristicAsync(Constants.Op2CharacteristicUuid, Constants.gattOperandParameters);
-            if (result.Error == BluetoothError.Success)
-            {
-                op2Characteristic = result.Characteristic;
-            }
-            else
-            {
-                rootPage.NotifyUser($"Could not create operand2 characteristic: {result.Error}", NotifyType.ErrorMessage);
-                return false;
+                // Need to clear the CCCD from the remote device so we stop receiving notifications
+                var result = await PmdControlPointCharacteristic.WriteClientCharacteristicConfigurationDescriptorAsync(GattClientCharacteristicConfigurationDescriptorValue.None);
+                if (result != GattCommunicationStatus.Success)
+                {
+                    return false;
+                }
+                else
+                {
+                    PmdControlPointCharacteristic.ValueChanged -= Characteristic_ValueChanged;
+                    subscribedForIndications_PmdCP = false;
+                }
             }
 
-            op2Characteristic.WriteRequested += Op2Characteristic_WriteRequestedAsync;
-
-            result = await serviceProvider.Service.CreateCharacteristicAsync(Constants.OperatorCharacteristicUuid, Constants.gattOperatorParameters);
-            if (result.Error == BluetoothError.Success)
+            if (subscribedForNotifications_PmdData)
             {
-                operatorCharacteristic = result.Characteristic;
+                // Need to clear the CCCD from the remote device so we stop receiving notifications
+                var result = await PmdDataCharacteristic.WriteClientCharacteristicConfigurationDescriptorAsync(GattClientCharacteristicConfigurationDescriptorValue.None);
+                if (result != GattCommunicationStatus.Success)
+                {
+                    return false;
+                }
+                else
+                {
+                    PmdDataCharacteristic.ValueChanged -= Characteristic_ValueChanged;
+                    subscribedForNotifications_PmdData = false;
+                }
             }
-            else
-            {
-                rootPage.NotifyUser($"Could not create operator characteristic: {result.Error}", NotifyType.ErrorMessage);
-                return false;
-            }
 
-            operatorCharacteristic.WriteRequested += OperatorCharacteristic_WriteRequestedAsync;
-
-            // Add presentation format - 32-bit unsigned integer, with exponent 0, the unit is unitless, with no company description
-            GattPresentationFormat intFormat = GattPresentationFormat.FromParts(
-                GattPresentationFormatTypes.UInt32,
-                PresentationFormats.Exponent,
-                Convert.ToUInt16(PresentationFormats.Units.Unitless),
-                Convert.ToByte(PresentationFormats.NamespaceId.BluetoothSigAssignedNumber),
-                PresentationFormats.Description);
-
-            Constants.gattResultParameters.PresentationFormats.Add(intFormat);
-
-            result = await serviceProvider.Service.CreateCharacteristicAsync(Constants.ResultCharacteristicUuid, Constants.gattResultParameters);
-            if (result.Error == BluetoothError.Success)
-            {
-                resultCharacteristic = result.Characteristic;
-            }
-            else
-            {
-                rootPage.NotifyUser($"Could not create result characteristic: {result.Error}", NotifyType.ErrorMessage);
-                return false;
-            }
-            resultCharacteristic.ReadRequested += ResultCharacteristic_ReadRequestedAsync;
-            resultCharacteristic.SubscribedClientsChanged += ResultCharacteristic_SubscribedClientsChanged;
-
-            // BT_Code: Indicate if your sever advertises as connectable and discoverable.
-            GattServiceProviderAdvertisingParameters advParameters = new GattServiceProviderAdvertisingParameters
-            {
-                // IsConnectable determines whether a call to publish will attempt to start advertising and 
-                // put the service UUID in the ADV packet (best effort)
-                IsConnectable = peripheralSupported,
-
-                // IsDiscoverable determines whether a remote device can query the local device for support 
-                // of this service
-                IsDiscoverable = true
-            };
-            serviceProvider.AdvertisementStatusChanged += ServiceProvider_AdvertisementStatusChanged;
-            serviceProvider.StartAdvertising(advParameters);
+            bluetoothLeDevice?.Dispose();
+            bluetoothLeDevice = null;
             return true;
         }
 
-        private void ResultCharacteristic_SubscribedClientsChanged(GattLocalCharacteristic sender, object args)
-        {
-            rootPage.NotifyUser($"New device subscribed. New subscribed count: {sender.SubscribedClients.Count}", NotifyType.StatusMessage);
-        }
 
-        private void ServiceProvider_AdvertisementStatusChanged(GattServiceProvider sender, GattServiceProviderAdvertisementStatusChangedEventArgs args)
+        private async void SetupConnectionPolarH10()
         {
-            // Created - The default state of the advertisement, before the service is published for the first time.
-            // Stopped - Indicates that the application has canceled the service publication and its advertisement.
-            // Started - Indicates that the system was successfully able to issue the advertisement request.
-            // Aborted - Indicates that the system was unable to submit the advertisement request, or it was canceled due to resource contention.
-
-            rootPage.NotifyUser($"New Advertisement Status: {sender.AdvertisementStatus}", NotifyType.StatusMessage);
-        }
-
-        private async void ResultCharacteristic_ReadRequestedAsync(GattLocalCharacteristic sender, GattReadRequestedEventArgs args)
-        {
-            // BT_Code: Process a read request. 
-            using (args.GetDeferral())
+            // Request services
+            if (await ConnectAndFetchServices() == false)
             {
-                // Get the request information.  This requires device access before an app can access the device's request. 
-                GattReadRequest request = await args.GetRequestAsync();
-                if (request == null)
-                {
-                    // No access allowed to the device.  Application should indicate this to the user.
-                    rootPage.NotifyUser("Access to device not allowed", NotifyType.ErrorMessage);
-                    return;
-                }
-
-                var writer = new DataWriter();
-                writer.ByteOrder = ByteOrder.LittleEndian;
-                writer.WriteInt32(resultVal);
-
-                // Can get details about the request such as the size and offset, as well as monitor the state to see if it has been completed/cancelled externally.
-                // request.Offset
-                // request.Length
-                // request.State
-                // request.StateChanged += <Handler>
-
-                // Gatt code to handle the response
-                request.RespondWithValue(writer.DetachBuffer());
+                rootPage.NotifyUser("Error accessing services from Polar H10.", NotifyType.ErrorMessage);
+                return;
             }
+
+            // Characteristics from Battery Service
+            if (BatteryService != null)
+            {
+                if (await EnumerateCharacteristics(BatteryService))
+                {
+                    foreach (GattCharacteristic characteristic in temp_characteristics)
+                    {
+                        // Store the characteristics of interest
+                        if (characteristic.Uuid.CompareTo(BLE_PolarH10.BATTERY_LEVEL_CHARACTERISTIC) == 0)
+                        {
+                            BatteryLevelCharacteristic = characteristic;
+                            Debug.WriteLine("Found Battery Level Characteristic: " + characteristic.Uuid.ToString());
+                        }
+                    }
+                }
+            }
+            else
+            {
+                Debug.WriteLine("Battery Service could not be found");
+            }
+
+            // Characteristics from Heart Rate Monitor Service
+            if (HrmService != null)
+            {
+                if (await EnumerateCharacteristics(HrmService))
+                {
+                    foreach (GattCharacteristic characteristic in temp_characteristics)
+                    {
+                        // Store the characteristics of interest
+                        if (characteristic.Uuid.CompareTo(BLE_PolarH10.HR_MEASUREMENT) == 0)
+                        {
+                            HeartRateMeasurementCharacteristic = characteristic;
+                            Debug.WriteLine("Found HR Measurement Characteristic: " + characteristic.Uuid.ToString());
+                        }
+                    }
+                }
+            }
+            else
+            {
+                Debug.WriteLine("Heart Rate Monitor Service could not be found");
+            }
+
+            // Characteristics from Streaming Measurement Service
+            if (PmdService != null)
+            {
+                if (await EnumerateCharacteristics(PmdService))
+                {
+                    foreach (GattCharacteristic characteristic in temp_characteristics)
+                    {
+                        // Store the characteristics of interest
+                        if (characteristic.Uuid.CompareTo(BLE_PolarH10.PMD_CP) == 0)
+                        {
+                            PmdControlPointCharacteristic = characteristic;
+                            Debug.WriteLine("Found PMD_CP Characteristic: " + characteristic.Uuid.ToString());
+                        }
+                        else if (characteristic.Uuid.CompareTo(BLE_PolarH10.PMD_DATA) == 0)
+                        {
+                            PmdDataCharacteristic = characteristic;
+                            Debug.WriteLine("Found PMD_DATA Characteristic: " + characteristic.Uuid.ToString());
+                        }
+                    }
+                }
+            }
+            else
+            {
+                Debug.WriteLine("Streaming of ECG and ACC could not be found");
+            }
+
+            ///// SETUP STREAMING CHARACTERISTICS
+
+            if (await ConfigurePmDStreaming())
+            {
+                Debug.WriteLine("Setup Streaming was OK");
+
+                byte[] configPmdCP = await CharacteristicRead(PmdControlPointCharacteristic);
+
+                if (configPmdCP != null)
+                {
+                    // Data from the PMD Control Point has been received
+                    BLE_PolarH10.PmdControlPointResponse response = new BLE_PolarH10.PmdControlPointResponse(configPmdCP);
+
+                    response.ToString();
+                }
+            }
+
+            // TODO: Show buttons
         }
 
-        private int ComputeResult()
+
+
+        private async Task<bool> ConnectAndFetchServices()
         {
-            Int32 computedValue = 0;
-            switch (operatorReceived)
+            ConnectButton.IsEnabled = false;
+            ConnectButton.Content = "Connecting...";
+
+            if (!await ClearBluetoothLEDeviceAsync())
             {
-                case CalculatorOperators.Add:
-                    computedValue = operand1Received + operand2Received;
-                    break;
-                case CalculatorOperators.Subtract:
-                    computedValue = operand1Received - operand2Received;
-                    break;
-                case CalculatorOperators.Multiply:
-                    computedValue = operand1Received * operand2Received;
-                    break;
-                case CalculatorOperators.Divide:
-                    if (operand2Received == 0 || (operand1Received == -0x80000000 && operand2Received == -1))
+                rootPage.NotifyUser("Error: Unable to reset state, try again.", NotifyType.ErrorMessage);
+                ConnectButton.IsEnabled = true;
+                return false;
+            }
+
+            try
+            {
+                // BT_Code: BluetoothLEDevice.FromIdAsync must be called from a UI thread because it may prompt for consent.
+                bluetoothLeDevice = await BluetoothLEDevice.FromIdAsync(rootPage.SelectedBleDeviceId);
+
+                if (bluetoothLeDevice == null)
+                {
+                    rootPage.NotifyUser("Failed to connect to device.", NotifyType.ErrorMessage);
+                }
+            }
+            catch (Exception ex) when (ex.HResult == E_DEVICE_NOT_AVAILABLE)
+            {
+                rootPage.NotifyUser("Bluetooth radio is not on.", NotifyType.ErrorMessage);
+            }
+
+            if (bluetoothLeDevice != null)
+            {
+                // Note: BluetoothLEDevice.GattServices property will return an empty list for unpaired devices. For all uses we recommend using the GetGattServicesAsync method.
+                // BT_Code: GetGattServicesAsync returns a list of all the supported services of the device (even if it's not paired to the system).
+                // If the services supported by the device are expected to change during BT usage, subscribe to the GattServicesChanged event.
+
+                //gattSession = await GattSession.FromDeviceIdAsync(bluetoothLeDevice.BluetoothDeviceId);
+                //System.Diagnostics.Debug.WriteLine("GattSession MTU (MaxPduSize): " + gattSession.MaxPduSize);
+
+                GattDeviceServicesResult result = await bluetoothLeDevice.GetGattServicesAsync(BluetoothCacheMode.Uncached);
+
+                if (result.Status == GattCommunicationStatus.Success)
+                {
+                    var services = result.Services;
+                    rootPage.NotifyUser(String.Format("Found {0} services", services.Count), NotifyType.StatusMessage);
+                    foreach (var service in services)
                     {
-                        rootPage.NotifyUser("Division overflow", NotifyType.ErrorMessage);
+                        //ServiceList.Items.Add(new ComboBoxItem { Content = DisplayHelpers.GetServiceName(service), Tag = service });
+
+                        // Store the services of interest
+                        if (service.Uuid.CompareTo(BLE_PolarH10.PMD_SERVICE) == 0)
+                        {
+                            PmdService = service;
+                            Debug.WriteLine("Found PMD Service" + service.Uuid.ToString());
+
+                        }
+                        else if (service.Uuid.CompareTo(BLE_PolarH10.HR_SERVICE) == 0)
+                        {
+                            HrmService = service;
+                            Debug.WriteLine("Found HRM Service" + service.Uuid.ToString());
+                        }
+                        else if (service.Uuid.CompareTo(BLE_PolarH10.BATTERY_SERVICE) == 0)
+                        {
+                            BatteryService = service;
+                            Debug.WriteLine("Found Battery Service" + service.Uuid.ToString());
+                        }
+
+                    }
+                    ConnectButton.Visibility = Visibility.Collapsed;
+                    //ServiceList.Visibility = Visibility.Visible;
+
+                    ConnectButton.Content = "Connect";
+                    ConnectButton.IsEnabled = true;
+
+                    return true;
+                }
+                else
+                {
+                    rootPage.NotifyUser("Device unreachable", NotifyType.ErrorMessage);
+                }
+            }
+
+            ConnectButton.Content = "Connect";
+            ConnectButton.IsEnabled = true;
+
+            return false;
+        }
+
+        private async Task<bool> EnumerateCharacteristics(GattDeviceService service)
+        {
+            temp_characteristics = null;
+            try
+            {
+                // Ensure we have access to the device.
+                var accessStatus = await service.RequestAccessAsync();
+                if (accessStatus == DeviceAccessStatus.Allowed)
+                {
+                    // BT_Code: Get all the child characteristics of a service. Use the cache mode to specify uncached characterstics only 
+                    // and the new Async functions to get the characteristics of unpaired devices as well. 
+                    var result = await service.GetCharacteristicsAsync(BluetoothCacheMode.Uncached);
+                    if (result.Status == GattCommunicationStatus.Success)
+                    {
+                        temp_characteristics = result.Characteristics;
+                        return true;
                     }
                     else
                     {
-                        computedValue = operand1Received / operand2Received;
+                        rootPage.NotifyUser("Error accessing service.", NotifyType.ErrorMessage);
+
+                        // On error, act as if there are no characteristics.
+                        temp_characteristics = new List<GattCharacteristic>();
+                        return false;
                     }
-                    break;
-                default:
-                    rootPage.NotifyUser("Invalid Operator", NotifyType.ErrorMessage);
-                    break;
-            }
-            NotifyClientDevices(computedValue);
-            return computedValue;
-        }
-
-        private async void NotifyClientDevices(int computedValue)
-        {
-            var writer = new DataWriter();
-            writer.ByteOrder = ByteOrder.LittleEndian;
-            writer.WriteInt32(computedValue);
-
-            // BT_Code: Returns a collection of all clients that the notification was attempted and the result.
-            IReadOnlyList<GattClientNotificationResult> results = await resultCharacteristic.NotifyValueAsync(writer.DetachBuffer());
-
-            rootPage.NotifyUser($"Sent value {computedValue} to clients.", NotifyType.StatusMessage);
-            foreach (var result in results)
-            {
-                // An application can iterate through each registered client that was notified and retrieve the results:
-                //
-                // result.SubscribedClient: The details on the remote client.
-                // result.Status: The GattCommunicationStatus
-                // result.ProtocolError: iff Status == GattCommunicationStatus.ProtocolError
-            }
-        }
-
-        private async void Op1Characteristic_WriteRequestedAsync(GattLocalCharacteristic sender, GattWriteRequestedEventArgs args)
-        {
-            // BT_Code: Processing a write request.
-            using (args.GetDeferral())
-            {
-                // Get the request information.  This requires device access before an app can access the device's request.
-                GattWriteRequest request = await args.GetRequestAsync();
-                if (request == null)
-                {
-                    // No access allowed to the device.  Application should indicate this to the user.
-                    return;
                 }
-                ProcessWriteCharacteristic(request, CalculatorCharacteristics.Operand1);
-            }
-        }
-
-        private async void Op2Characteristic_WriteRequestedAsync(GattLocalCharacteristic sender, GattWriteRequestedEventArgs args)
-        {
-            using (args.GetDeferral())
-            {
-                // Get the request information.  This requires device access before an app can access the device's request.
-                GattWriteRequest request = await args.GetRequestAsync();
-                if (request == null)
+                else
                 {
-                    // No access allowed to the device.  Application should indicate this to the user.
-                    return;
-                }
-                ProcessWriteCharacteristic(request, CalculatorCharacteristics.Operand2);
-            }
-        }
+                    // Not granted access
+                    rootPage.NotifyUser("Error accessing service.", NotifyType.ErrorMessage);
 
-        private async void OperatorCharacteristic_WriteRequestedAsync(GattLocalCharacteristic sender, GattWriteRequestedEventArgs args)
-        {
-            using (args.GetDeferral())
-            {
-                // Get the request information.  This requires device access before an app can access the device's request.
-                GattWriteRequest request = await args.GetRequestAsync();
-                if (request == null)
-                {
-                    // No access allowed to the device.  Application should indicate this to the user.
-                    return;
+                    // On error, act as if there are no characteristics.
+                    temp_characteristics = new List<GattCharacteristic>();
+                    return false;
                 }
-                ProcessWriteCharacteristic(request, CalculatorCharacteristics.Operator);
+            }
+            catch (Exception ex)
+            {
+                rootPage.NotifyUser("Restricted service. Can't read characteristics: " + ex.Message,
+                    NotifyType.ErrorMessage);
+                // On error, act as if there are no characteristics.
+                temp_characteristics = new List<GattCharacteristic>();
+
+                return false;
             }
         }
 
         /// <summary>
-        /// BT_Code: Processing a write request.Takes in a GATT Write request and updates UX based on opcode.
+        /// Perform the prerequisites to connect to the Polar H10 for data streaming
+        /// according to the documentation on
+        /// https://github.com/polarofficial/polar-ble-sdk/blob/master/technical_documentation/Polar_Measurement_Data_Specification.pdf
         /// </summary>
-        /// <param name="request"></param>
-        /// <param name="opCode">Operand (1 or 2) and Operator (3)</param>
-        private void ProcessWriteCharacteristic(GattWriteRequest request, CalculatorCharacteristics opCode)
+        /// <returns>bool with result of processes</returns>
+        private async Task<bool> ConfigurePmDStreaming()
         {
-            if (request.Value.Length != 4)
+            // Set the Indication flag for the PMD Control Point
+            bool cp_ok = false;
+            // Set the notifications flag for the PMD Data
+            bool data_ok = false;
+
+            if (!subscribedForIndications_PmdCP)
             {
-                // Input is the wrong length. Respond with a protocol error if requested.
-                if (request.Option == GattWriteOption.WriteWithResponse)
+                cp_ok = await ValueChanged_SetNotifications(PmdControlPointCharacteristic, GattClientCharacteristicConfigurationDescriptorValue.Indicate);
+                if (cp_ok)
                 {
-                    request.RespondWithProtocolError(GattProtocolError.InvalidAttributeValueLength);
+                    // Set callback
+                    PmdControlPointCharacteristic.ValueChanged += Characteristic_ValueChanged;
+                    subscribedForIndications_PmdCP = true;
                 }
-                return;
             }
 
-            var reader = DataReader.FromBuffer(request.Value);
-            reader.ByteOrder = ByteOrder.LittleEndian;
-            int val = reader.ReadInt32();
-
-            switch (opCode)
+            if (!subscribedForNotifications_PmdData)
             {
-                case CalculatorCharacteristics.Operand1:
-                    operand1Received = val;
-                    break;
-                case CalculatorCharacteristics.Operand2:
-                    operand2Received = val;
-                    break;
-                case CalculatorCharacteristics.Operator:
-                    if (!Enum.IsDefined(typeof(CalculatorOperators), val))
+                data_ok = await ValueChanged_SetNotifications(PmdDataCharacteristic, GattClientCharacteristicConfigurationDescriptorValue.Notify);
+                if (data_ok)
+                {
+                    // Set callback
+                    PmdDataCharacteristic.ValueChanged += Characteristic_ValueChanged;
+                    subscribedForNotifications_PmdData = true;
+                }
+            }
+            return cp_ok & data_ok;
+        }
+
+
+        private async void ReadBattery_Click()
+        {
+            byte[] response = await CharacteristicRead(BatteryLevelCharacteristic);
+            if (response != null)
+            {
+                Debug.WriteLine("Battery value was read: " + BitConverter.ToString(response));
+            }
+        }
+
+        private async void ToggleHeartRate_Toggled(object sender, RoutedEventArgs e)
+        {
+            ToggleSwitch toggleSwitch = sender as ToggleSwitch;
+            if (toggleSwitch != null)
+            {
+                if (toggleSwitch.IsOn == true)
+                {
+                    if (!subscribedForNotification_Hrm)
                     {
-                        if (request.Option == GattWriteOption.WriteWithResponse)
+                        if (await ValueChanged_SetNotifications(HeartRateMeasurementCharacteristic) == true)
                         {
-                            request.RespondWithProtocolError(GattProtocolError.InvalidPdu);
+                            // Set callback
+                            HeartRateMeasurementCharacteristic.ValueChanged += Characteristic_ValueChanged;
+                            subscribedForNotification_Hrm = true;
                         }
-                        return;
+                        else { toggleSwitch.IsOn = false; }
                     }
-                    operatorReceived = (CalculatorOperators)val;
-                    break;
+                }
+                else
+                {
+                    if (subscribedForNotification_Hrm)
+                    {
+                        if (await ValueChanged_UnsetNotifications(HeartRateMeasurementCharacteristic) == true)
+                        {
+                            // Unset Callback
+                            subscribedForNotification_Hrm = false;
+                            HeartRateMeasurementCharacteristic.ValueChanged -= Characteristic_ValueChanged;
+                        }
+                        else { toggleSwitch.IsOn = true; }
+                    }
+                }
             }
-            // Complete the request if needed
-            if (request.Option == GattWriteOption.WriteWithResponse)
+        }
+
+        private async void ToggleECG_Toggled(object sender, RoutedEventArgs e)
+        {
+            ToggleSwitch toggleSwitch = sender as ToggleSwitch;
+            if (toggleSwitch != null)
             {
-                request.Respond();
+                if (toggleSwitch.IsOn == true)
+                {
+                    if (!subscribedForNotifications_PmdData)
+                    {
+                        if (await ValueChanged_SetNotifications(PmdDataCharacteristic) == true)
+                        {
+                            // Set callback
+                            PmdDataCharacteristic.ValueChanged += Characteristic_ValueChanged;
+                            subscribedForNotifications_PmdData= true;
+                        }
+                        else { toggleSwitch.IsOn = false; }
+                    }
+                }
+                else
+                {
+                    if (subscribedForNotifications_PmdData)
+                    {
+                        if (await ValueChanged_UnsetNotifications(PmdDataCharacteristic) == true)
+                        {
+                            // Unset Callback
+                            subscribedForNotifications_PmdData = false;
+                            PmdDataCharacteristic.ValueChanged -= Characteristic_ValueChanged;
+                        }
+                        else { toggleSwitch.IsOn = true; }
+                    }
+                }
+            }
+        }
+
+        private async void ToggleACC_Toggled(object sender, RoutedEventArgs e)
+        {
+            ToggleSwitch toggleSwitch = sender as ToggleSwitch;
+            if (toggleSwitch != null)
+            {
+                if (toggleSwitch.IsOn == true)
+                {
+                    
+                }
+                else
+                {
+                    //
+                }
+            }
+        }
+
+
+
+        private async Task<bool> ValueChanged_SetNotifications(GattCharacteristic selectedCharacteristic,
+                                                          GattClientCharacteristicConfigurationDescriptorValue subscriptionType = GattClientCharacteristicConfigurationDescriptorValue.Notify)
+        {
+            // initialize status
+            GattCommunicationStatus status = GattCommunicationStatus.Unreachable;
+            var cccdValue = GattClientCharacteristicConfigurationDescriptorValue.None;
+
+            if (subscriptionType == GattClientCharacteristicConfigurationDescriptorValue.Notify &&
+                selectedCharacteristic.CharacteristicProperties.HasFlag(GattCharacteristicProperties.Notify))
+            {
+                cccdValue = GattClientCharacteristicConfigurationDescriptorValue.Notify;
+            }
+            else if (subscriptionType == GattClientCharacteristicConfigurationDescriptorValue.Indicate &&
+                selectedCharacteristic.CharacteristicProperties.HasFlag(GattCharacteristicProperties.Indicate))
+            {
+                cccdValue = GattClientCharacteristicConfigurationDescriptorValue.Indicate;
             }
 
-            UpdateUX();
+            try
+            {
+                // BT_Code: Must write the CCCD in order for server to send indications.
+                // We receive them in the ValueChanged event handler.
+                status = await selectedCharacteristic.WriteClientCharacteristicConfigurationDescriptorAsync(cccdValue);
+
+                if (status == GattCommunicationStatus.Success)
+                {
+                    rootPage.NotifyUser("Successfully subscribed for value changes", NotifyType.StatusMessage);
+                    // CALL THE CALLBACK FUNCTION
+                    return true;
+                }
+                else
+                {
+                    rootPage.NotifyUser($"Error registering for value changes: {status}", NotifyType.ErrorMessage);
+                    return false;
+                }
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                // This usually happens when a device reports that it support indicate, but it actually doesn't.
+                rootPage.NotifyUser(ex.Message, NotifyType.ErrorMessage);
+                return false;
+            }
+        }
+
+        private async Task<bool> ValueChanged_UnsetNotifications(GattCharacteristic selectedCharacteristic)
+        {
+            try
+            {
+                // BT_Code: Must write the CCCD in order for server to send notifications.
+                var result = await
+                        selectedCharacteristic.WriteClientCharacteristicConfigurationDescriptorAsync(
+                            GattClientCharacteristicConfigurationDescriptorValue.None);
+                if (result == GattCommunicationStatus.Success)
+                {
+                    // UNSET FLAG AND UNSET CALLBACK
+                    rootPage.NotifyUser("Successfully un-registered for notifications", NotifyType.StatusMessage);
+                    return true;
+                }
+                else
+                {
+                    rootPage.NotifyUser($"Error un-registering for notifications: {result}", NotifyType.ErrorMessage);
+                    return false;
+                }
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                // This usually happens when a device reports that it support notify, but it actually doesn't.
+                rootPage.NotifyUser(ex.Message, NotifyType.ErrorMessage);
+                return false;
+            }
+        }
+
+        private void SetVisibility(UIElement element, bool visible)
+        {
+            element.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private void EnableCharacteristicPanels(GattCharacteristicProperties properties)
+        {
+            //    // BT_Code: Hide the controls which do not apply to this characteristic.
+            //    SetVisibility(CharacteristicReadButton, properties.HasFlag(GattCharacteristicProperties.Read));
+
+            //    SetVisibility(CharacteristicWritePanel,
+            //        properties.HasFlag(GattCharacteristicProperties.Write) ||
+            //        properties.HasFlag(GattCharacteristicProperties.WriteWithoutResponse));
+            //    CharacteristicWriteValue.Text = "";
+
+            //    SetVisibility(ValueChangedSubscribeToggle, properties.HasFlag(GattCharacteristicProperties.Indicate) ||
+            //                                               properties.HasFlag(GattCharacteristicProperties.Notify));
+
+            //    SetVisibility(ValueChangedIndicateToggle, properties.HasFlag(GattCharacteristicProperties.Indicate));
+        }
+
+        private async void GetDescriptorsFromCharacteristic(GattCharacteristic selectedCharacteristic)
+        {
+            // Get all the child descriptors of a characteristics. Use the cache mode to specify uncached descriptors only 
+            // and the new Async functions to get the descriptors of unpaired devices as well. 
+            var result = await selectedCharacteristic.GetDescriptorsAsync(BluetoothCacheMode.Uncached);
+            if (result.Status != GattCommunicationStatus.Success)
+            {
+                rootPage.NotifyUser("Descriptor read failure: " + result.Status.ToString(), NotifyType.ErrorMessage);
+            }
+
+            // BT_Code: There's no need to access presentation format unless there's at least one. 
+            presentationFormat = null;
+            if (selectedCharacteristic.PresentationFormats.Count > 0)
+            {
+
+                if (selectedCharacteristic.PresentationFormats.Count.Equals(1))
+                {
+                    // Get the presentation format since there's only one way of presenting it
+                    presentationFormat = selectedCharacteristic.PresentationFormats[0];
+                }
+                else
+                {
+                    // It's difficult to figure out how to split up a characteristic and encode its different parts properly.
+                    // In this case, we'll just encode the whole thing to a string to make it easy to print out.
+                }
+            }
+
+            // Enable/disable operations based on the GattCharacteristicProperties.
+            EnableCharacteristicPanels(selectedCharacteristic.CharacteristicProperties);
+        }
+
+
+
+        private async Task<byte[]> CharacteristicRead(GattCharacteristic selectedCharacteristic)
+        {
+            // BT_Code: Read the actual value from the device by using Uncached.
+            GattReadResult result = await selectedCharacteristic.ReadValueAsync(BluetoothCacheMode.Uncached);
+
+            if (result.Status == GattCommunicationStatus.Success)
+            {
+                byte[] data;
+                CryptographicBuffer.CopyToByteArray(result.Value, out data);
+                Debug.WriteLine("Read Result:" + BitConverter.ToString(data));
+
+                string formattedResult = FormatValueByPresentation(result.Value, presentationFormat);
+                rootPage.NotifyUser($"Read result: {formattedResult}", NotifyType.StatusMessage);
+                return data;
+            }
+            else
+            {
+                rootPage.NotifyUser($"Read failed: {result.Status}", NotifyType.ErrorMessage);
+                return null;
+            }
+        }
+
+
+        private async Task<bool> CharacteristicWriteHex(GattCharacteristic selectedCharacteristic, string text)
+        {
+            if (!String.IsNullOrEmpty(text))
+            {
+                try
+                {
+                    // Test parsing
+                    int intValue = int.Parse(text, System.Globalization.NumberStyles.HexNumber);
+
+                    // Parse text to Hex
+                    IBuffer buffer = ToIBufferFromHexString(text);
+
+                    byte[] data;
+                    CryptographicBuffer.CopyToByteArray(buffer, out data);
+                    Debug.WriteLine("Write HEX:" + BitConverter.ToString(data));
+                    Debug.WriteLine("\t Buffer Length:" + buffer.Length.ToString());
+
+                    return await WriteBufferToSelectedCharacteristicAsync(selectedCharacteristic, buffer);
+                }
+                catch (FormatException exception)
+                {
+                    Debug.WriteLine(exception.Message);
+
+                    // wrong format
+                    rootPage.NotifyUser("Data to write has to be an HEX string without Ox at the beginning", NotifyType.ErrorMessage);
+                }
+            }
+            else
+            {
+                rootPage.NotifyUser("No data to write to device", NotifyType.ErrorMessage);
+                return false;
+            }
+            return false;
+        }
+
+        private static IBuffer ToIBufferFromHexString(string data)
+        {
+            data = data.Replace("-", "");
+
+            int NumberChars = data.Length;
+            byte[] bytes = new byte[NumberChars / 2];
+
+            for (int i = 0; i < NumberChars; i += 2)
+            {
+                bytes[i / 2] = Convert.ToByte(data.Substring(i, 2), 16);
+            }
+
+            DataWriter writer = new DataWriter();
+            writer.WriteBytes(bytes);
+            return writer.DetachBuffer();
+        }
+
+
+        private async Task<bool> WriteBufferToSelectedCharacteristicAsync(GattCharacteristic selectedCharacteristic, IBuffer buffer)
+        {
+            try
+            {
+                // BT_Code: Writes the value from the buffer to the characteristic.
+                var result = await selectedCharacteristic.WriteValueWithResultAsync(buffer);
+
+                if (result.Status == GattCommunicationStatus.Success)
+                {
+                    rootPage.NotifyUser("Successfully wrote value to device", NotifyType.StatusMessage);
+                    return true;
+                }
+                else
+                {
+                    rootPage.NotifyUser($"Write failed: {result.Status}", NotifyType.ErrorMessage);
+                    return false;
+                }
+            }
+            catch (Exception ex) when (ex.HResult == E_BLUETOOTH_ATT_INVALID_PDU)
+            {
+                rootPage.NotifyUser(ex.Message, NotifyType.ErrorMessage);
+                return false;
+            }
+            catch (Exception ex) when (ex.HResult == E_BLUETOOTH_ATT_WRITE_NOT_PERMITTED || ex.HResult == E_ACCESSDENIED)
+            {
+                // This usually happens when a device reports that it support writing, but it actually doesn't.
+                rootPage.NotifyUser(ex.Message, NotifyType.ErrorMessage);
+                return false;
+            }
+        }
+
+        private async void Characteristic_ValueChanged(GattCharacteristic sender, GattValueChangedEventArgs args)
+        {
+            // BT_Code: An Indicate or Notify reported that the value has changed.
+            // Display the new value with a timestamp.
+            var newValue = FormatValueByPresentation(args.CharacteristicValue, presentationFormat);
+            var message = $"Value at {DateTime.Now:hh:mm:ss.FFF}: {newValue}";
+
+            System.Diagnostics.Debug.WriteLine("Received Notification:" + newValue + " from " + sender.ToString());
+
+            await Dispatcher.RunAsync(CoreDispatcherPriority.Normal,
+                () => CharacteristicLatestValue.Text = message);
+        }
+
+        private string FormatValueByPresentation(IBuffer buffer, GattPresentationFormat format)
+        {
+            // BT_Code: For the purpose of this sample, this function converts only UInt32 and
+            // UTF-8 buffers to readable text. It can be extended to support other formats if your app needs them.
+            byte[] data;
+            CryptographicBuffer.CopyToByteArray(buffer, out data);
+
+            return BitConverter.ToString(data);
+
+            if (format != null)
+            {
+                if (format.FormatType == GattPresentationFormatTypes.UInt32 && data.Length >= 4)
+                {
+                    return BitConverter.ToInt32(data, 0).ToString();
+                }
+                else if (format.FormatType == GattPresentationFormatTypes.Utf8)
+                {
+                    try
+                    {
+                        return Encoding.UTF8.GetString(data);
+                    }
+                    catch (ArgumentException)
+                    {
+                        return "(error: Invalid UTF-8 string)";
+                    }
+                }
+                else
+                {
+                    // Add support for other format types as needed.
+                    return "Unsupported format: " + CryptographicBuffer.EncodeToHexString(buffer);
+                }
+            }
+            return "Unknown format";
+        }
+
+        /// <summary>
+        /// Process the raw data received from the device into application usable data,
+        /// according the the Bluetooth Heart Rate Profile.
+        /// https://www.bluetooth.com/specifications/gatt/viewer?attributeXmlFile=org.bluetooth.characteristic.heart_rate_measurement.xml&u=org.bluetooth.characteristic.heart_rate_measurement.xml
+        /// This function throws an exception if the data cannot be parsed.
+        /// </summary>
+        /// <param name="data">Raw data received from the heart rate monitor.</param>
+        /// <returns>The heart rate measurement value.</returns>
+        private static ushort ParseHeartRateValue(byte[] data)
+        {
+
+            /*To get the rr-interval you have to read the flags from the first byte you receive. You read the flags as binary from right to left.
+                bit 0 = 0: Heart Rate Value Format is set to UINT8.Units:BPM(1 byte).
+                bit 0 = 1: Heart Rate Value Format is set to UINT16.Units:BPM(2 bytes).
+
+                bit 1 and 2: Sensor Contact Status bits. These are not relevant for this.
+
+                bit 3 = 0: Energy Expended field is not present.
+                bit 3 = 1: Energy Expended field is present.Format = uint16.Units: kilo Joules.
+
+                bit 4 = 0: RR - Interval values are not present.
+                bit 4 = 1: One or more RR - Interval values are present.Format = uint16.unit 1 / 1024 sec.
+
+                bit 5, 6 and 7: reserved for future use.
+
+            If your first byte for example = 16 = 0x10 = 0b00010000 then byte 2 = is heart rate.
+                Byte 3 and 4 are the rr - interval.
+                Byte 5 and 6(if present) rr - interval.
+            */
+
+            System.Diagnostics.Debug.WriteLine("Parsing HR Value: " + BitConverter.ToString(data));
+
+            // Heart Rate profile defined flag values
+            const byte heartRateValueFormat = 0x01;
+
+            byte flags = data[0];
+            bool isHeartRateValueSizeLong = ((flags & heartRateValueFormat) != 0);
+
+            if (isHeartRateValueSizeLong)
+            {
+                return BitConverter.ToUInt16(data, 1);
+            }
+            else
+            {
+                return data[1];
+            }
         }
     }
 }
