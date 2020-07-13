@@ -54,6 +54,11 @@ namespace SDKTemplate
 
         private GattPresentationFormat presentationFormat;
 
+        // Console variables
+        private bool is_console_enabled = true;
+        private readonly int MAX_BUFFER_CONSOLE = 100;
+        private int bufferCounter = 0;
+
         #region Error Codes
         readonly int E_BLUETOOTH_ATT_WRITE_NOT_PERMITTED = unchecked((int)0x80650003);
         readonly int E_BLUETOOTH_ATT_INVALID_PDU = unchecked((int)0x80650004);
@@ -601,6 +606,18 @@ namespace SDKTemplate
             }
         }
 
+        private void ShowMessagesConsole_Checked(object sender, RoutedEventArgs e)
+        {
+            CheckBox checkBox= sender as CheckBox;
+            if (checkBox != null)
+            {
+                if (checkBox.IsChecked == true)
+                    is_console_enabled = true;
+                else
+                    is_console_enabled = false;
+            }
+        }
+
         private async Task<bool> ValueChanged_SetNotifications(GattCharacteristic selectedCharacteristic,
                                                           GattClientCharacteristicConfigurationDescriptorValue subscriptionType = GattClientCharacteristicConfigurationDescriptorValue.Notify)
         {
@@ -871,23 +888,23 @@ namespace SDKTemplate
             }
         }
 
-        private readonly int bufferConsole = 200;
-        private int bufferCounter = 0;
         private async void AppendConsoleText(string text)
         {
-            if (bufferCounter++ < bufferConsole)
+            if (is_console_enabled)
             {
-                await Dispatcher.RunAsync(CoreDispatcherPriority.Normal,
-                () => consolePanel.Text += text + "\n");
+                if (bufferCounter++ < MAX_BUFFER_CONSOLE)
+                {
+                    await Dispatcher.RunAsync(CoreDispatcherPriority.Normal,
+                    () => consolePanel.Text += text + "\n");
+                }
+                else
+                {
+                    bufferCounter = 0;
+                    // Clean buffer
+                    await Dispatcher.RunAsync(CoreDispatcherPriority.Normal,
+                    () => consolePanel.Text = text + "\n");
+                }
             }
-            else
-            {
-                bufferCounter = 0;
-                // Clean buffer
-                await Dispatcher.RunAsync(CoreDispatcherPriority.Normal,
-                () => consolePanel.Text = text + "\n");
-            }
-            
         }
     }
 }

@@ -263,7 +263,7 @@ namespace SDKTemplate
                                                         // bit5-8 | RESERVED
             public ushort HR = 0;                       // Heart Rate Value | Unit: beats per min
             public ushort EE = 0;                       // Energy Expended | Unit: Kilo Joules
-            public ushort RR = 0;                       // RR-interval | Unit: ms
+            public float  RR = 0;                       // RR-interval | Unit: ms
 
             public HeartRateMeasurementData(byte[] value)
             {
@@ -299,7 +299,8 @@ namespace SDKTemplate
                 if (hasRRinterval)
                 {
                     // If has RR interval data
-                    RR = BitConverter.ToUInt16(value, offset);
+                    ushort receivedRR = BitConverter.ToUInt16(value, offset);
+                    RR = (float)receivedRR * 1000 / 1024; // Convert from resolution 1/1024 seconds to ms
                 }
             }
 
@@ -307,7 +308,7 @@ namespace SDKTemplate
             {
                 return $"HeartRateMeasurementData >> " +
                     $"packetSize:{size} | HR_UINT16:{formatUINT16} | has_EE:{hasEnergyExpenditure} | has_RR:{hasRRinterval} \n" +
-                    $"\tHR={HR} | EE={EE} | RR={RR}";
+                    $"\tHR={HR} | EE={EE} | RR={RR:F3}";
             }
         }
 

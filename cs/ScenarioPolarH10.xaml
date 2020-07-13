@@ -47,7 +47,10 @@
             </StackPanel>
         </StackPanel>
         <StackPanel Orientation="Vertical">
-            <TextBlock Text="Console Messages:"/>
+            <StackPanel Orientation="Horizontal" Margin="0,25,0,0">
+                <TextBlock Text="LOG EVENTS"/>
+                <CheckBox Content="Report incoming messages" IsChecked="True" Checked="ShowMessagesConsole_Checked" Unchecked="ShowMessagesConsole_Checked" Margin="40,0,12,0" Height="20" Canvas.ZIndex="-3" FontSize="12"/>
+            </StackPanel>
             <ScrollViewer x:Name="scrollviewer" Grid.Row="1" Background="#FF16184D" FontSize="13" FontStretch="Condensed" Height="400" VerticalScrollMode="Enabled">
                 <TextBlock x:Name="consolePanel" Text="" TextWrapping="Wrap" IsTextSelectionEnabled="True"/>
             </ScrollViewer>
