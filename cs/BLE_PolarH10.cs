@@ -28,7 +28,44 @@ namespace SDKTemplate
         public static readonly Guid PMD_DATA        = new Guid("FB005C82-02E7-F387-1CAD-8ACD2D8DF0C8");
         public static readonly Guid PMD_CP          = new Guid("FB005C81-02E7-F387-1CAD-8ACD2D8DF0C8");
 
-        enum MeasurementType
+        public enum PmdResponseCode
+        {
+            STREAM_SETTINGS_RESPONSE = 0x0F,
+            STREAMING_RESPONSE = 0xF0,
+        }
+
+        // Response from the initial config to the PMD
+        public class PmdStreamSettings
+        {
+            private enum SupportedStreamsCode : byte
+            {
+                ECG_SUPPORTED = 0x01,
+                PPG_SUPPORTED = 0x02,
+                ACC_SUPPORTED = 0x04,
+                PPI_SUPPORTED = 0x08,
+            }
+            public bool EcgSupported = false;
+            public bool PpgSupported = false;
+            public bool AccSupported = false;
+            public bool PpiSupported = false;
+
+            public PmdStreamSettings(byte settingsByte)
+            {
+                this.EcgSupported = (settingsByte & (byte)SupportedStreamsCode.ECG_SUPPORTED) != 0;
+                this.PpgSupported = (settingsByte & (byte)SupportedStreamsCode.PPG_SUPPORTED) != 0;
+                this.AccSupported = (settingsByte & (byte)SupportedStreamsCode.ACC_SUPPORTED) != 0;
+                this.PpiSupported = (settingsByte & (byte)SupportedStreamsCode.PPI_SUPPORTED) != 0;
+            }
+        }
+
+        public enum PmdControlPointCommand
+        {
+            GET_MEASUREMENT_SETTINGS = 0x01,
+            REQUEST_MEASUREMENT_START = 0x02,
+            STOP_MEASUREMENT = 0x03,
+        }
+
+        public enum MeasurementSensor
         {
             // Supported by Polar H10
             ECG = 0x00,     // Electrocardiographic Signal
@@ -45,16 +82,10 @@ namespace SDKTemplate
             UNKNOWN_TYPE = 0xFF,
         }
 
-        public enum PmdControlPointCommand
-        {
-            GET_MEASUREMENT_SETTINGS = 0x01,
-            REQUEST_MEASUREMENT_START = 0x02,
-            STOP_MEASUREMENT = 0x03,
-        }
-
         public class PmdControlPointResponse
         {
-            public byte responseCode;
+            public PmdStreamSettings streamSettings = null;
+            public PmdResponseCode responseCode;
             public PmdControlPointCommand opCode;
             public byte measurementType;
             public PmdControlPointResponseCode status;
@@ -79,12 +110,20 @@ namespace SDKTemplate
 
             public PmdControlPointResponse(byte[] data)
             {
-                responseCode = data[0];
+                responseCode = (PmdResponseCode) data[0];
                 opCode = (PmdControlPointCommand) data[1];
                 measurementType = data[2];
                 status = (PmdControlPointResponseCode) data[3];
                 if (status == PmdControlPointResponseCode.SUCCESS)
                 {
+
+                    // Stream Settings
+                    if (responseCode.Equals(PmdResponseCode.STREAM_SETTINGS_RESPONSE))
+                    {
+                        streamSettings = new PmdStreamSettings((byte)opCode);
+                    }
+
+                    // More data
                     more = data.Length > 4 && data[4] != 0;
                     if (data.Length > 5)
                     {
@@ -100,6 +139,76 @@ namespace SDKTemplate
             }
         }
 
+        /// <summary>
+        /// Create ATT package based on API instructions
+        /// </summary>
+        /// <param name="command"></param>
+        /// <param name="sensor"></param>
+        /// <param name="additionalData"></param>
+        /// <returns></returns>
+        public static IBuffer CreateStreamingRequest(PmdControlPointCommand command, MeasurementSensor sensor /*ADD PARAMETERS FOR SPECIFIC SETUP OF STREAMING*/)
+        {
+            int numBytes = 0;
+            byte[] parameters = null;
+
+            if (command == PmdControlPointCommand.GET_MEASUREMENT_SETTINGS || command == PmdControlPointCommand.STOP_MEASUREMENT)
+            {
+                numBytes = 2;
+                parameters = new byte[numBytes];
+            }
+            else if (command == PmdControlPointCommand.REQUEST_MEASUREMENT_START)
+            {
+                switch (sensor)
+                {
+                    case MeasurementSensor.ECG:
+                        numBytes = 10;
+                        parameters = new byte[numBytes];
+
+                        // Specific setup for ECG
+                        parameters[2] = (byte)0x00;     // SAMPLE_RATE
+                        parameters[3] = (byte)0x01;     // array_count(1)
+                        parameters[4] = (byte)0x82;     // 130Hz - A
+                        parameters[5] = (byte)0x00;     // 130Hz - B
+                        parameters[6] = (byte)0x01;     // RESOLUTION
+                        parameters[7] = (byte)0x01;     // array_count(1)
+                        parameters[8] = (byte)0x0E;     // 14bit - A
+                        parameters[9] = (byte)0x00;     // 14bit - B
+
+                        break;
+                    case MeasurementSensor.ACC:
+                        numBytes = 14;
+                        parameters = new byte[numBytes];
+
+                        // Specific Setup for ACC
+                        parameters[2] = (byte)0x00;     // SAMPLE_RATE
+                        parameters[3] = (byte)0x01;     // array_count(1)
+                        parameters[4] = (byte)0xC8;     // 200Hz - A
+                        parameters[5] = (byte)0x00;     // 200Hz - B
+                        parameters[6] = (byte)0x01;     // RESOLUTION
+                        parameters[7] = (byte)0x01;     // array_count(1)
+                        parameters[8] = (byte)0x10;     // 16bit - A
+                        parameters[9] = (byte)0x00;     // 16bit - B
+                        parameters[10]= (byte)0x02;     // RANGE
+                        parameters[11]= (byte)0x01;     // array_count(1)
+                        parameters[12]= (byte)0x08;     // 8G - A
+                        parameters[13]= (byte)0x00;     // 8G - B
+                        break;
+                }
+            }
+            else
+            {
+                return null;
+            }
+
+            // Always at the beginning goes the command and type of sensor
+            parameters[0] = (byte)command;
+            parameters[1] = (byte)sensor;
+
+            DataWriter writer = new DataWriter();
+            writer.WriteBytes(parameters);
+            return writer.DetachBuffer();
+        }
+
         readonly string CONFIG_ACC = "0102";
         readonly string START_ACC = "02020001C8000101100002010800";
         readonly string STOP_ACC = "0302";
@@ -108,33 +217,6 @@ namespace SDKTemplate
         readonly string START_ECG = "02000001820001010E00";
         readonly string STOP_ECG = "0300";
 
-
-
-        public class PmdFeature
-        {
-            public bool ecgSupported;
-            public bool ppgSupported;
-            public bool accSupported;
-            public bool ppiSupported;
-            public bool bioZSupported;
-            public bool gyroSupported;
-            public bool magnetometerSupported;
-            public bool barometerSupported;
-            public bool ambientSupported;
-
-            public PmdFeature(byte[] data)
-            {
-                ecgSupported = (data[1] & 0x01) != 0;
-                ppgSupported = (data[1] & 0x02) != 0;
-                accSupported = (data[1] & 0x04) != 0;
-                ppiSupported = (data[1] & 0x08) != 0;
-                bioZSupported = (data[1] & 0x10) != 0;
-                gyroSupported = (data[1] & 0x20) != 0;
-                magnetometerSupported = (data[1] & 0x40) != 0;
-                barometerSupported = (data[1] & 0x80) != 0;
-                ambientSupported = (data[2] & 0x01) != 0;
-            }
-        }
 
         public class EcgData
         {
@@ -166,7 +248,7 @@ namespace SDKTemplate
 
                     //if (type == 0)
                     //{ // production
-                        sample.microVolts = ///BleUtils.convertArrayToSignedInt(value, offset, 3);
+                    sample.microVolts = 0;///BleUtils.convertArrayToSignedInt(value, offset, 3);
                     //}
                     offset += 3;
                     ecgSamples.Add(sample);

@@ -28,13 +28,20 @@
                 Selected device: <Run x:Name="SelectedDeviceRun" FontWeight="Bold"/>
             </TextBlock>
             <Button x:Name="ConnectButton" Content="Connect" Margin="0,10,0,0"/>
-            <StackPanel Orientation="Horizontal">
+            <StackPanel x:Name="PanelCharacteristics" Orientation="Horizontal" Visibility="Collapsed">
                 <Button Content="READ Battery" Click="{x:Bind ReadBattery_Click}" Margin="0,10,0,0"/>
                 <ToggleSwitch x:Name="toggleHeartRate" Header="Heart Rate" IsOn="False" Toggled="ToggleHeartRate_Toggled"/>
                 <ToggleSwitch x:Name="toggleECG" Header="ECG" IsOn="False" Toggled="ToggleECG_Toggled"/>
                 <ToggleSwitch x:Name="toggleACC" Header="Accelerometer" IsOn="False" Toggled="ToggleACC_Toggled"/>
             </StackPanel>
             <TextBlock x:Name="CharacteristicLatestValue" Margin="0,10,0,0" Visibility="Visible"/>
+            <StackPanel Orientation="Vertical">
+                <TextBlock Text="Console Messages:"/>
+                <ScrollViewer x:Name="scrollviewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Hidden"
+                            VerticalScrollMode="Enabled" Grid.Row="1" Background="#FF16184D" FontSize="13" FontStretch="Condensed">
+                    <TextBlock x:Name="consolePanel" Text="" TextWrapping="Wrap" IsTextSelectionEnabled="True"/>
+                </ScrollViewer>
+            </StackPanel>
         </StackPanel>
     </ScrollViewer>
 </Page>

@@ -34,7 +34,6 @@ namespace SDKTemplate
         private MainPage rootPage = MainPage.Current;
 
         private BluetoothLEDevice bluetoothLeDevice = null;
-        //private GattSession gattSession = null;
 
         private GattDeviceService BatteryService;
         private GattDeviceService PmdService;
@@ -149,7 +148,11 @@ namespace SDKTemplate
         private async void SetupConnectionPolarH10()
         {
             // Request services
-            if (await ConnectAndFetchServices() == false)
+            if (await ConnectAndFetchServices())
+            {
+                AppendConsoleText($"Requesting Services from Polar H10... OK");
+            }
+            else
             {
                 rootPage.NotifyUser("Error accessing services from Polar H10.", NotifyType.ErrorMessage);
                 return;
@@ -167,6 +170,7 @@ namespace SDKTemplate
                         {
                             BatteryLevelCharacteristic = characteristic;
                             Debug.WriteLine("Found Battery Level Characteristic: " + characteristic.Uuid.ToString());
+                            AppendConsoleText($"Battery Level Characteristic UUID: {characteristic.Uuid.ToString()}");
                         }
                     }
                 }
@@ -188,6 +192,7 @@ namespace SDKTemplate
                         {
                             HeartRateMeasurementCharacteristic = characteristic;
                             Debug.WriteLine("Found HR Measurement Characteristic: " + characteristic.Uuid.ToString());
+                            AppendConsoleText($"Heart Rate Measurement Characteristic UUID: {characteristic.Uuid}");
                         }
                     }
                 }
@@ -209,11 +214,12 @@ namespace SDKTemplate
                         {
                             PmdControlPointCharacteristic = characteristic;
                             Debug.WriteLine("Found PMD_CP Characteristic: " + characteristic.Uuid.ToString());
+                            AppendConsoleText($"Streaming PMD Control Point Characteristic UUID: {characteristic.Uuid.ToString()}");
                         }
                         else if (characteristic.Uuid.CompareTo(BLE_PolarH10.PMD_DATA) == 0)
                         {
                             PmdDataCharacteristic = characteristic;
-                            Debug.WriteLine("Found PMD_DATA Characteristic: " + characteristic.Uuid.ToString());
+                            Debug.WriteLine("Streaming PMD Data Characteristic: " + characteristic.Uuid.ToString());
                         }
                     }
                 }
@@ -228,6 +234,7 @@ namespace SDKTemplate
             if (await ConfigurePmDStreaming())
             {
                 Debug.WriteLine("Setup Streaming was OK");
+                AppendConsoleText($"Configuring Streaming... OK");
 
                 byte[] configPmdCP = await CharacteristicRead(PmdControlPointCharacteristic);
 
@@ -236,11 +243,15 @@ namespace SDKTemplate
                     // Data from the PMD Control Point has been received
                     BLE_PolarH10.PmdControlPointResponse response = new BLE_PolarH10.PmdControlPointResponse(configPmdCP);
 
-                    response.ToString();
+                    AppendConsoleText($"ECG supported = {response.streamSettings.EcgSupported}");
+                    AppendConsoleText($"PPG supported = {response.streamSettings.PpgSupported}");
+                    AppendConsoleText($"ACC supported = {response.streamSettings.AccSupported}");
+                    AppendConsoleText($"PPI supported = {response.streamSettings.PpiSupported}");
                 }
             }
 
             // TODO: Show buttons
+            PanelCharacteristics.Visibility = Visibility.Visible;
         }
 
 
@@ -414,7 +425,6 @@ namespace SDKTemplate
             return cp_ok & data_ok;
         }
 
-
         private async void ReadBattery_Click()
         {
             byte[] response = await CharacteristicRead(BatteryLevelCharacteristic);
@@ -465,28 +475,45 @@ namespace SDKTemplate
             {
                 if (toggleSwitch.IsOn == true)
                 {
+                    // ACTIVATE ECG STREAMING
                     if (!subscribedForNotifications_PmdData)
                     {
                         if (await ValueChanged_SetNotifications(PmdDataCharacteristic) == true)
                         {
                             // Set callback
                             PmdDataCharacteristic.ValueChanged += Characteristic_ValueChanged;
-                            subscribedForNotifications_PmdData= true;
+                            subscribedForNotifications_PmdData = true;
                         }
-                        else { toggleSwitch.IsOn = false; }
+                        else 
+                        { 
+                            toggleSwitch.IsOn = false;
+                            rootPage.NotifyUser("Error Setting Notification for PMD Data", NotifyType.ErrorMessage);
+                            return;
+                        }
+                    }
+                    
+                    // Streaming Request
+                    IBuffer bufferRequest = BLE_PolarH10.CreateStreamingRequest(BLE_PolarH10.PmdControlPointCommand.REQUEST_MEASUREMENT_START, BLE_PolarH10.MeasurementSensor.ECG);
+                    if (await CharacteristicWriteIBuffer(PmdControlPointCharacteristic, bufferRequest))
+                    {
+                        AppendConsoleText("ECG Stream has started");
+                    }
+                    else
+                    {
+                        Debug.WriteLine("Error on ECG Request");
                     }
                 }
                 else
                 {
-                    if (subscribedForNotifications_PmdData)
+                    // STOP ECG STREAMING
+                    IBuffer bufferRequest = BLE_PolarH10.CreateStreamingRequest(BLE_PolarH10.PmdControlPointCommand.STOP_MEASUREMENT, BLE_PolarH10.MeasurementSensor.ECG);
+                    if (await CharacteristicWriteIBuffer(PmdControlPointCharacteristic, bufferRequest))
                     {
-                        if (await ValueChanged_UnsetNotifications(PmdDataCharacteristic) == true)
-                        {
-                            // Unset Callback
-                            subscribedForNotifications_PmdData = false;
-                            PmdDataCharacteristic.ValueChanged -= Characteristic_ValueChanged;
-                        }
-                        else { toggleSwitch.IsOn = true; }
+                        AppendConsoleText("ECG Stream has been stopped");
+                    }
+                    else
+                    {
+                        Debug.WriteLine("Error on ECG Stop Request");
                     }
                 }
             }
@@ -499,16 +526,49 @@ namespace SDKTemplate
             {
                 if (toggleSwitch.IsOn == true)
                 {
-                    
+                    // ACTIVATE AAC STREAMING
+                    if (!subscribedForNotifications_PmdData)
+                    {
+                        if (await ValueChanged_SetNotifications(PmdDataCharacteristic) == true)
+                        {
+                            // Set callback
+                            PmdDataCharacteristic.ValueChanged += Characteristic_ValueChanged;
+                            subscribedForNotifications_PmdData = true;
+                        }
+                        else
+                        {
+                            toggleSwitch.IsOn = false;
+                            rootPage.NotifyUser("Error Setting Notification for PMD Data", NotifyType.ErrorMessage);
+                            return;
+                        }
+                    }
+
+                    // Streaming Request
+                    IBuffer bufferRequest = BLE_PolarH10.CreateStreamingRequest(BLE_PolarH10.PmdControlPointCommand.REQUEST_MEASUREMENT_START, BLE_PolarH10.MeasurementSensor.ACC);
+                    if (await CharacteristicWriteIBuffer(PmdControlPointCharacteristic, bufferRequest))
+                    {
+                        AppendConsoleText("ACC Stream has started");
+                    }
+                    else
+                    {
+                        Debug.WriteLine("Error on ACC Request");
+                    }
                 }
                 else
                 {
-                    //
+                    // STOP ACC STREAMING
+                    IBuffer bufferRequest = BLE_PolarH10.CreateStreamingRequest(BLE_PolarH10.PmdControlPointCommand.STOP_MEASUREMENT, BLE_PolarH10.MeasurementSensor.ACC);
+                    if (await CharacteristicWriteIBuffer(PmdControlPointCharacteristic, bufferRequest))
+                    {
+                        AppendConsoleText("ACC Stream has been stopped");
+                    }
+                    else
+                    {
+                        Debug.WriteLine("Error on ACC Stop Request");
+                    }
                 }
             }
         }
-
-
 
         private async Task<bool> ValueChanged_SetNotifications(GattCharacteristic selectedCharacteristic,
                                                           GattClientCharacteristicConfigurationDescriptorValue subscriptionType = GattClientCharacteristicConfigurationDescriptorValue.Notify)
@@ -582,60 +642,6 @@ namespace SDKTemplate
             }
         }
 
-        private void SetVisibility(UIElement element, bool visible)
-        {
-            element.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
-        }
-
-        private void EnableCharacteristicPanels(GattCharacteristicProperties properties)
-        {
-            //    // BT_Code: Hide the controls which do not apply to this characteristic.
-            //    SetVisibility(CharacteristicReadButton, properties.HasFlag(GattCharacteristicProperties.Read));
-
-            //    SetVisibility(CharacteristicWritePanel,
-            //        properties.HasFlag(GattCharacteristicProperties.Write) ||
-            //        properties.HasFlag(GattCharacteristicProperties.WriteWithoutResponse));
-            //    CharacteristicWriteValue.Text = "";
-
-            //    SetVisibility(ValueChangedSubscribeToggle, properties.HasFlag(GattCharacteristicProperties.Indicate) ||
-            //                                               properties.HasFlag(GattCharacteristicProperties.Notify));
-
-            //    SetVisibility(ValueChangedIndicateToggle, properties.HasFlag(GattCharacteristicProperties.Indicate));
-        }
-
-        private async void GetDescriptorsFromCharacteristic(GattCharacteristic selectedCharacteristic)
-        {
-            // Get all the child descriptors of a characteristics. Use the cache mode to specify uncached descriptors only 
-            // and the new Async functions to get the descriptors of unpaired devices as well. 
-            var result = await selectedCharacteristic.GetDescriptorsAsync(BluetoothCacheMode.Uncached);
-            if (result.Status != GattCommunicationStatus.Success)
-            {
-                rootPage.NotifyUser("Descriptor read failure: " + result.Status.ToString(), NotifyType.ErrorMessage);
-            }
-
-            // BT_Code: There's no need to access presentation format unless there's at least one. 
-            presentationFormat = null;
-            if (selectedCharacteristic.PresentationFormats.Count > 0)
-            {
-
-                if (selectedCharacteristic.PresentationFormats.Count.Equals(1))
-                {
-                    // Get the presentation format since there's only one way of presenting it
-                    presentationFormat = selectedCharacteristic.PresentationFormats[0];
-                }
-                else
-                {
-                    // It's difficult to figure out how to split up a characteristic and encode its different parts properly.
-                    // In this case, we'll just encode the whole thing to a string to make it easy to print out.
-                }
-            }
-
-            // Enable/disable operations based on the GattCharacteristicProperties.
-            EnableCharacteristicPanels(selectedCharacteristic.CharacteristicProperties);
-        }
-
-
-
         private async Task<byte[]> CharacteristicRead(GattCharacteristic selectedCharacteristic)
         {
             // BT_Code: Read the actual value from the device by using Uncached.
@@ -658,57 +664,28 @@ namespace SDKTemplate
             }
         }
 
-
-        private async Task<bool> CharacteristicWriteHex(GattCharacteristic selectedCharacteristic, string text)
+        private async Task<bool> CharacteristicWriteIBuffer(GattCharacteristic selectedCharacteristic, IBuffer buffer)
         {
-            if (!String.IsNullOrEmpty(text))
+            try
             {
-                try
-                {
-                    // Test parsing
-                    int intValue = int.Parse(text, System.Globalization.NumberStyles.HexNumber);
+                byte[] data;
+                CryptographicBuffer.CopyToByteArray(buffer, out data);
+                Debug.WriteLine("Write HEX:" + BitConverter.ToString(data));
+                Debug.WriteLine("\t Buffer Length:" + buffer.Length.ToString());
 
-                    // Parse text to Hex
-                    IBuffer buffer = ToIBufferFromHexString(text);
+                AppendConsoleText($"Writing to characteristic: {selectedCharacteristic.Uuid}. Value: {BitConverter.ToString(data)} | {buffer.Length} bytes");
 
-                    byte[] data;
-                    CryptographicBuffer.CopyToByteArray(buffer, out data);
-                    Debug.WriteLine("Write HEX:" + BitConverter.ToString(data));
-                    Debug.WriteLine("\t Buffer Length:" + buffer.Length.ToString());
-
-                    return await WriteBufferToSelectedCharacteristicAsync(selectedCharacteristic, buffer);
-                }
-                catch (FormatException exception)
-                {
-                    Debug.WriteLine(exception.Message);
-
-                    // wrong format
-                    rootPage.NotifyUser("Data to write has to be an HEX string without Ox at the beginning", NotifyType.ErrorMessage);
-                }
+                return await WriteBufferToSelectedCharacteristicAsync(selectedCharacteristic, buffer);
             }
-            else
+            catch (FormatException exception)
             {
-                rootPage.NotifyUser("No data to write to device", NotifyType.ErrorMessage);
+                Debug.WriteLine(exception.Message);
+
+                // wrong format
+                rootPage.NotifyUser("Data to write has to be an HEX string without Ox at the beginning", NotifyType.ErrorMessage);
+
                 return false;
             }
-            return false;
-        }
-
-        private static IBuffer ToIBufferFromHexString(string data)
-        {
-            data = data.Replace("-", "");
-
-            int NumberChars = data.Length;
-            byte[] bytes = new byte[NumberChars / 2];
-
-            for (int i = 0; i < NumberChars; i += 2)
-            {
-                bytes[i / 2] = Convert.ToByte(data.Substring(i, 2), 16);
-            }
-
-            DataWriter writer = new DataWriter();
-            writer.WriteBytes(bytes);
-            return writer.DetachBuffer();
         }
 
 
@@ -837,6 +814,11 @@ namespace SDKTemplate
             {
                 return data[1];
             }
+        }
+
+        private void AppendConsoleText(string text)
+        {
+            consolePanel.Text += text + "\n";
         }
     }
 }
