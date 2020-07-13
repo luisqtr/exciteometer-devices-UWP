@@ -51,10 +51,15 @@ namespace SDKTemplate
 
             public PmdStreamSettings(byte settingsByte)
             {
-                this.EcgSupported = (settingsByte & (byte)SupportedStreamsCode.ECG_SUPPORTED) != 0;
-                this.PpgSupported = (settingsByte & (byte)SupportedStreamsCode.PPG_SUPPORTED) != 0;
-                this.AccSupported = (settingsByte & (byte)SupportedStreamsCode.ACC_SUPPORTED) != 0;
-                this.PpiSupported = (settingsByte & (byte)SupportedStreamsCode.PPI_SUPPORTED) != 0;
+                EcgSupported = (settingsByte & (byte)SupportedStreamsCode.ECG_SUPPORTED) != 0;
+                PpgSupported = (settingsByte & (byte)SupportedStreamsCode.PPG_SUPPORTED) != 0;
+                AccSupported = (settingsByte & (byte)SupportedStreamsCode.ACC_SUPPORTED) != 0;
+                PpiSupported = (settingsByte & (byte)SupportedStreamsCode.PPI_SUPPORTED) != 0;
+            }
+
+            public override string ToString()
+            {
+                return $"\n\tEcgSupported:{EcgSupported}\n\tPpgSupported:{PpgSupported}\n\tAccSupported:{AccSupported}\n\tPpiSupported:{PpiSupported}";
             }
         }
 
@@ -82,62 +87,6 @@ namespace SDKTemplate
             UNKNOWN_TYPE = 0xFF,
         }
 
-        public class PmdControlPointResponse
-        {
-            public PmdStreamSettings streamSettings = null;
-            public PmdResponseCode responseCode;
-            public PmdControlPointCommand opCode;
-            public byte measurementType;
-            public PmdControlPointResponseCode status;
-            public IBuffer parameters;
-            public bool more;
-
-            public enum PmdControlPointResponseCode
-            {
-                SUCCESS = 0x00,
-                ERROR_INVALID_OP_CODE = 0x01,
-
-                ERROR_INVALID_MEASUREMENT_TYPE = 0x02,
-                ERROR_NOT_SUPPORTED = 0x03,
-                ERROR_INVALID_LENGTH = 0x04,
-                ERROR_INVALID_PARAMETER = 0x05,
-                ERROR_INVALID_STATE = 0x06,
-                ERROR_INVALID_RESOLUTION = 0x07,
-                ERROR_INVALID_SAMPLE_RATE = 0x08,
-                ERROR_INVALID_RANGE = 0x09,
-                ERROR_INVALID_MTU = 0x0A,
-            }
-
-            public PmdControlPointResponse(byte[] data)
-            {
-                responseCode = (PmdResponseCode) data[0];
-                opCode = (PmdControlPointCommand) data[1];
-                measurementType = data[2];
-                status = (PmdControlPointResponseCode) data[3];
-                if (status == PmdControlPointResponseCode.SUCCESS)
-                {
-
-                    // Stream Settings
-                    if (responseCode.Equals(PmdResponseCode.STREAM_SETTINGS_RESPONSE))
-                    {
-                        streamSettings = new PmdStreamSettings((byte)opCode);
-                    }
-
-                    // More data
-                    more = data.Length > 4 && data[4] != 0;
-                    if (data.Length > 5)
-                    {
-                        // Copy the remaining data in a new variable
-                        byte[] additional_data = new byte[data.Length - 5];
-                        Array.Copy(data, 5, additional_data, 0, data.Length - 5); //IN JAVA: .write(data, 5, data.Length - 5);
-
-                        DataWriter writer = new DataWriter();
-                        writer.WriteBytes(additional_data);
-                        parameters = writer.DetachBuffer();
-                    }
-                }
-            }
-        }
 
         /// <summary>
         /// Create ATT package based on API instructions
@@ -188,10 +137,10 @@ namespace SDKTemplate
                         parameters[7] = (byte)0x01;     // array_count(1)
                         parameters[8] = (byte)0x10;     // 16bit - A
                         parameters[9] = (byte)0x00;     // 16bit - B
-                        parameters[10]= (byte)0x02;     // RANGE
-                        parameters[11]= (byte)0x01;     // array_count(1)
-                        parameters[12]= (byte)0x08;     // 8G - A
-                        parameters[13]= (byte)0x00;     // 8G - B
+                        parameters[10] = (byte)0x02;     // RANGE
+                        parameters[11] = (byte)0x01;     // array_count(1)
+                        parameters[12] = (byte)0x08;     // 8G - A
+                        parameters[13] = (byte)0x00;     // 8G - B
                         break;
                 }
             }
@@ -209,14 +158,158 @@ namespace SDKTemplate
             return writer.DetachBuffer();
         }
 
-        readonly string CONFIG_ACC = "0102";
-        readonly string START_ACC = "02020001C8000101100002010800";
-        readonly string STOP_ACC = "0302";
+        /*
+         * 
+         * CLASSES DEFINITIONS
+         * 
+         * */
 
-        readonly string CONFIG_ECG = "0100";
-        readonly string START_ECG = "02000001820001010E00";
-        readonly string STOP_ECG = "0300";
+        public class PmdControlPointResponse
+        {
+            public PmdStreamSettings streamSettings = null;
+            public PmdResponseCode responseCode;
+            public PmdControlPointCommand opCode;
+            public MeasurementSensor measurementType;
+            public PmdControlPointResponseCode status;
+            public IBuffer parameters;
+            public bool more;
+            public string stringHex;
 
+            public enum PmdControlPointResponseCode
+            {
+                SUCCESS = 0x00,
+                ERROR_INVALID_OP_CODE = 0x01,
+
+                ERROR_INVALID_MEASUREMENT_TYPE = 0x02,
+                ERROR_NOT_SUPPORTED = 0x03,
+                ERROR_INVALID_LENGTH = 0x04,
+                ERROR_INVALID_PARAMETER = 0x05,
+                ERROR_INVALID_STATE = 0x06,
+                ERROR_INVALID_RESOLUTION = 0x07,
+                ERROR_INVALID_SAMPLE_RATE = 0x08,
+                ERROR_INVALID_RANGE = 0x09,
+                ERROR_INVALID_MTU = 0x0A,
+            }
+
+            public PmdControlPointResponse(byte[] data)
+            {
+                stringHex = BitConverter.ToString(data);
+                responseCode = (PmdResponseCode) data[0];
+                opCode = (PmdControlPointCommand) data[1];
+                measurementType = (MeasurementSensor) data[2];
+                status = (PmdControlPointResponseCode) data[3];
+                if (status == PmdControlPointResponseCode.SUCCESS)
+                {
+
+                    // Stream Settings
+                    if (responseCode.Equals(PmdResponseCode.STREAM_SETTINGS_RESPONSE))
+                    {
+                        streamSettings = new PmdStreamSettings((byte)opCode);
+                    }
+
+                    // More data
+                    more = data.Length > 4 && data[4] != 0;
+                    if (data.Length > 5)
+                    {
+                        // Copy the remaining data in a new variable
+                        byte[] additional_data = new byte[data.Length - 5];
+                        Array.Copy(data, 5, additional_data, 0, data.Length - 5); //IN JAVA: .write(data, 5, data.Length - 5);
+
+                        DataWriter writer = new DataWriter();
+                        writer.WriteBytes(additional_data);
+                        parameters = writer.DetachBuffer();
+                    }
+                }
+            }
+
+            public override string ToString()
+            {
+                return $"PmdControlPoint >> " +
+                    $"StreamSettings:{streamSettings}\n" +
+                    $"\tResponseCode: {responseCode} | opCode: {opCode} | Sensor: {measurementType} | Status:{status} | More bytes:{more}";
+            }
+        }
+
+        public class BatteryData
+        {
+            public ushort battery; // 16-bit
+            public BatteryData(byte[] value)
+            {
+                // Converts HEX number to INT
+                battery = value[0];
+            }
+
+            public override string ToString()
+            {
+                return $"BatteryData >> Battery Level = {battery}%";
+            }
+
+            public string ToStringValue()
+            {
+                return $"{battery}%";
+            }
+        }
+
+        public class HeartRateMeasurementData
+        {
+            public int size;
+            public byte flagsByte;
+
+            // FLAGS BYTE
+            public bool formatUINT16 = false;           // bit0   | 0:UINT8, 1:UINT16
+            public byte sensorContact;                  // bit1-2 | NOT USED >> Sensor contact feature
+            public bool hasEnergyExpenditure = false;   // bit3   | 1: Includes Values Energy Expenditure
+            public bool hasRRinterval = false;          // bit4   | 1: Values RR interval are present
+                                                        // bit5-8 | RESERVED
+            public ushort HR = 0;                       // Heart Rate Value | Unit: beats per min
+            public ushort EE = 0;                       // Energy Expended | Unit: Kilo Joules
+            public ushort RR = 0;                       // RR-interval | Unit: ms
+
+            public HeartRateMeasurementData(byte[] value)
+            {
+                size = value.Length;
+                flagsByte = value[0];
+
+                formatUINT16            = (flagsByte & (0x01)) != 0;
+                sensorContact           = (byte)(flagsByte & (0x06));
+                hasEnergyExpenditure    = (flagsByte & (0x08)) != 0;
+                hasRRinterval           = (flagsByte & (0x10)) != 0;
+
+                // Move pointer to read values from specific bytes
+                int offset = 1;
+
+                if (formatUINT16) // UINT16
+                {
+                    HR = BitConverter.ToUInt16(value, offset); // Takes two bytes for UINT16
+                    offset += 2; // Next value is two bytes away
+                }
+                else // UINT8
+                {
+                    HR = value[offset];
+                    offset++;   // Next value is one byte away
+                }
+
+                if (hasEnergyExpenditure)
+                {
+                    // If has EE, bytes 2 and 3 are EE
+                    EE = BitConverter.ToUInt16(value, offset);
+                    offset += 2;
+                }
+
+                if (hasRRinterval)
+                {
+                    // If has RR interval data
+                    RR = BitConverter.ToUInt16(value, offset);
+                }
+            }
+
+            public override string ToString()
+            {
+                return $"HeartRateMeasurementData >> " +
+                    $"packetSize:{size} | HR_UINT16:{formatUINT16} | has_EE:{hasEnergyExpenditure} | has_RR:{hasRRinterval} \n" +
+                    $"\tHR={HR} | EE={EE} | RR={RR}";
+            }
+        }
 
         public class EcgData
         {

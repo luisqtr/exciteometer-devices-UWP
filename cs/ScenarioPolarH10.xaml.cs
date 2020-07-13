@@ -170,7 +170,10 @@ namespace SDKTemplate
                         {
                             BatteryLevelCharacteristic = characteristic;
                             Debug.WriteLine("Found Battery Level Characteristic: " + characteristic.Uuid.ToString());
-                            AppendConsoleText($"Battery Level Characteristic UUID: {characteristic.Uuid.ToString()}");
+                            AppendConsoleText($"Battery Level Characteristic UUID: {characteristic.Uuid}");
+
+                            // Ask for battery level
+                            ReadBattery_Click();
                         }
                     }
                 }
@@ -242,19 +245,14 @@ namespace SDKTemplate
                 {
                     // Data from the PMD Control Point has been received
                     BLE_PolarH10.PmdControlPointResponse response = new BLE_PolarH10.PmdControlPointResponse(configPmdCP);
-
-                    AppendConsoleText($"ECG supported = {response.streamSettings.EcgSupported}");
-                    AppendConsoleText($"PPG supported = {response.streamSettings.PpgSupported}");
-                    AppendConsoleText($"ACC supported = {response.streamSettings.AccSupported}");
-                    AppendConsoleText($"PPI supported = {response.streamSettings.PpiSupported}");
+                    
+                    AppendConsoleText($"{response}");
                 }
             }
-
+            
             // TODO: Show buttons
             PanelCharacteristics.Visibility = Visibility.Visible;
         }
-
-
 
         private async Task<bool> ConnectAndFetchServices()
         {
@@ -431,6 +429,39 @@ namespace SDKTemplate
             if (response != null)
             {
                 Debug.WriteLine("Battery value was read: " + BitConverter.ToString(response));
+
+                BLE_PolarH10.BatteryData batteryResponse = new BLE_PolarH10.BatteryData(response);
+
+                AppendConsoleText(batteryResponse.ToString());
+
+                await Dispatcher.RunAsync(CoreDispatcherPriority.Normal,
+                () => textBatteryLevel.Text = batteryResponse.ToStringValue());
+            }
+        }
+
+        private async void SettingsECG_Click()
+        {
+            IBuffer bufferRequest = BLE_PolarH10.CreateStreamingRequest(BLE_PolarH10.PmdControlPointCommand.GET_MEASUREMENT_SETTINGS, BLE_PolarH10.MeasurementSensor.ECG);
+            if (await CharacteristicWriteIBuffer(PmdControlPointCharacteristic, bufferRequest))
+            {
+                AppendConsoleText("ECG settings requested...");
+            }
+            else
+            {
+                Debug.WriteLine("Error on ECG Settings Request");
+            }
+        }
+
+        private async void SettingsACC_Click()
+        {
+            IBuffer bufferRequest = BLE_PolarH10.CreateStreamingRequest(BLE_PolarH10.PmdControlPointCommand.GET_MEASUREMENT_SETTINGS, BLE_PolarH10.MeasurementSensor.ACC);
+            if (await CharacteristicWriteIBuffer(PmdControlPointCharacteristic, bufferRequest))
+            {
+                AppendConsoleText("ACC settings requested...");
+            }
+            else
+            {
+                Debug.WriteLine("Error on ACC Settings Request");
             }
         }
 
@@ -688,7 +719,6 @@ namespace SDKTemplate
             }
         }
 
-
         private async Task<bool> WriteBufferToSelectedCharacteristicAsync(GattCharacteristic selectedCharacteristic, IBuffer buffer)
         {
             try
@@ -727,7 +757,32 @@ namespace SDKTemplate
             var newValue = FormatValueByPresentation(args.CharacteristicValue, presentationFormat);
             var message = $"Value at {DateTime.Now:hh:mm:ss.FFF}: {newValue}";
 
-            System.Diagnostics.Debug.WriteLine("Received Notification:" + newValue + " from " + sender.ToString());
+            // Convert from Buffer to Byte
+            byte[] data;
+            CryptographicBuffer.CopyToByteArray(args.CharacteristicValue, out data);
+
+            if (sender.Uuid.Equals(BLE_PolarH10.BATTERY_LEVEL_CHARACTERISTIC))
+            {
+                BLE_PolarH10.BatteryData response = new BLE_PolarH10.BatteryData(data);
+                AppendConsoleText($"{response}");
+            }
+            else if (sender.Uuid.Equals(BLE_PolarH10.HR_MEASUREMENT))
+            {
+                BLE_PolarH10.HeartRateMeasurementData response = new BLE_PolarH10.HeartRateMeasurementData(data);
+                AppendConsoleText($"{response}");
+            }
+            // Response from Stream PMD Data
+            else if (sender.Uuid.Equals(BLE_PolarH10.PMD_DATA))
+            {
+                BLE_PolarH10.PmdControlPointResponse response = new BLE_PolarH10.PmdControlPointResponse(data);
+                AppendConsoleText($"{response}");
+            }
+            else
+            {
+                AppendConsoleText($"Data Received from unknown characteristic: {BitConverter.ToString(data)}");
+            }
+
+            Debug.WriteLine("Received:" + newValue + " from " + sender.ToString());
 
             await Dispatcher.RunAsync(CoreDispatcherPriority.Normal,
                 () => CharacteristicLatestValue.Text = message);
@@ -816,9 +871,23 @@ namespace SDKTemplate
             }
         }
 
-        private void AppendConsoleText(string text)
+        private readonly int bufferConsole = 200;
+        private int bufferCounter = 0;
+        private async void AppendConsoleText(string text)
         {
-            consolePanel.Text += text + "\n";
+            if (bufferCounter++ < bufferConsole)
+            {
+                await Dispatcher.RunAsync(CoreDispatcherPriority.Normal,
+                () => consolePanel.Text += text + "\n");
+            }
+            else
+            {
+                bufferCounter = 0;
+                // Clean buffer
+                await Dispatcher.RunAsync(CoreDispatcherPriority.Normal,
+                () => consolePanel.Text = text + "\n");
+            }
+            
         }
     }
 }
