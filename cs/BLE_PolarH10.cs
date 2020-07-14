@@ -8,6 +8,7 @@
 
 using System;
 using System.Collections.Generic;
+using Windows.Devices.Bluetooth.Advertisement;
 using Windows.Storage.Streams;
 
 namespace SDKTemplate
@@ -30,47 +31,34 @@ namespace SDKTemplate
 
         public enum PmdResponseCode
         {
-            STREAM_SETTINGS_RESPONSE = 0x0F,
-            STREAMING_RESPONSE = 0xF0,
-        }
-
-        // Response from the initial config to the PMD
-        public class PmdStreamSettings
-        {
-            private enum SupportedStreamsCode : byte
-            {
-                ECG_SUPPORTED = 0x01,
-                PPG_SUPPORTED = 0x02,
-                ACC_SUPPORTED = 0x04,
-                PPI_SUPPORTED = 0x08,
-            }
-            public bool EcgSupported = false;
-            public bool PpgSupported = false;
-            public bool AccSupported = false;
-            public bool PpiSupported = false;
-
-            public PmdStreamSettings(byte settingsByte)
-            {
-                EcgSupported = (settingsByte & (byte)SupportedStreamsCode.ECG_SUPPORTED) != 0;
-                PpgSupported = (settingsByte & (byte)SupportedStreamsCode.PPG_SUPPORTED) != 0;
-                AccSupported = (settingsByte & (byte)SupportedStreamsCode.ACC_SUPPORTED) != 0;
-                PpiSupported = (settingsByte & (byte)SupportedStreamsCode.PPI_SUPPORTED) != 0;
-            }
-
-            public override string ToString()
-            {
-                return $"\n\tEcgSupported:{EcgSupported}\n\tPpgSupported:{PpgSupported}\n\tAccSupported:{AccSupported}\n\tPpiSupported:{PpiSupported}";
-            }
+            FEATURES_READ_RESPONSE = 0x0F,
+            CONTROL_POINT_RESPONSE = 0xF0,
         }
 
         public enum PmdControlPointCommand
         {
+            NULL = 0x00,
             GET_MEASUREMENT_SETTINGS = 0x01,
             REQUEST_MEASUREMENT_START = 0x02,
             STOP_MEASUREMENT = 0x03,
         }
+        public enum PmdControlPointResponseCode
+        {
+            SUCCESS = 0x00,
+            ERROR_INVALID_OP_CODE = 0x01,
 
-        public enum MeasurementSensor
+            ERROR_INVALID_MEASUREMENT_TYPE = 0x02,
+            ERROR_NOT_SUPPORTED = 0x03,
+            ERROR_INVALID_LENGTH = 0x04,
+            ERROR_INVALID_PARAMETER = 0x05,
+            ERROR_INVALID_STATE = 0x06,
+            ERROR_INVALID_RESOLUTION = 0x07,
+            ERROR_INVALID_SAMPLE_RATE = 0x08,
+            ERROR_INVALID_RANGE = 0x09,
+            ERROR_INVALID_MTU = 0x0A,
+        }
+
+        public enum MeasurementType
         {
             // Supported by Polar H10
             ECG = 0x00,     // Electrocardiographic Signal
@@ -95,7 +83,7 @@ namespace SDKTemplate
         /// <param name="sensor"></param>
         /// <param name="additionalData"></param>
         /// <returns></returns>
-        public static IBuffer CreateStreamingRequest(PmdControlPointCommand command, MeasurementSensor sensor /*ADD PARAMETERS FOR SPECIFIC SETUP OF STREAMING*/)
+        public static IBuffer CreateStreamingRequest(PmdControlPointCommand command, MeasurementType sensor /*ADD PARAMETERS FOR SPECIFIC SETUP OF STREAMING*/)
         {
             int numBytes = 0;
             byte[] parameters = null;
@@ -109,38 +97,38 @@ namespace SDKTemplate
             {
                 switch (sensor)
                 {
-                    case MeasurementSensor.ECG:
+                    case MeasurementType.ECG:
                         numBytes = 10;
                         parameters = new byte[numBytes];
 
                         // Specific setup for ECG
-                        parameters[2] = (byte)0x00;     // SAMPLE_RATE
-                        parameters[3] = (byte)0x01;     // array_count(1)
-                        parameters[4] = (byte)0x82;     // 130Hz - A
-                        parameters[5] = (byte)0x00;     // 130Hz - B
-                        parameters[6] = (byte)0x01;     // RESOLUTION
-                        parameters[7] = (byte)0x01;     // array_count(1)
-                        parameters[8] = (byte)0x0E;     // 14bit - A
-                        parameters[9] = (byte)0x00;     // 14bit - B
+                        parameters[2] = 0x00;     // SAMPLE_RATE
+                        parameters[3] = 0x01;     // array_count(1)
+                        parameters[4] = 0x82;     // 130Hz - A
+                        parameters[5] = 0x00;     // 130Hz - B
+                        parameters[6] = 0x01;     // RESOLUTION
+                        parameters[7] = 0x01;     // array_count(1)
+                        parameters[8] = 0x0E;     // 14bit - A
+                        parameters[9] = 0x00;     // 14bit - B
 
                         break;
-                    case MeasurementSensor.ACC:
+                    case MeasurementType.ACC:
                         numBytes = 14;
                         parameters = new byte[numBytes];
 
                         // Specific Setup for ACC
-                        parameters[2] = (byte)0x00;     // SAMPLE_RATE
-                        parameters[3] = (byte)0x01;     // array_count(1)
-                        parameters[4] = (byte)0xC8;     // 200Hz - A
-                        parameters[5] = (byte)0x00;     // 200Hz - B
-                        parameters[6] = (byte)0x01;     // RESOLUTION
-                        parameters[7] = (byte)0x01;     // array_count(1)
-                        parameters[8] = (byte)0x10;     // 16bit - A
-                        parameters[9] = (byte)0x00;     // 16bit - B
-                        parameters[10] = (byte)0x02;     // RANGE
-                        parameters[11] = (byte)0x01;     // array_count(1)
-                        parameters[12] = (byte)0x08;     // 8G - A
-                        parameters[13] = (byte)0x00;     // 8G - B
+                        parameters[2] = 0x00;     // SAMPLE_RATE
+                        parameters[3] = 0x01;     // array_count(1)
+                        parameters[4] = 0xC8;     // 200Hz - A
+                        parameters[5] = 0x00;     // 200Hz - B
+                        parameters[6] = 0x01;     // RESOLUTION
+                        parameters[7] = 0x01;     // array_count(1)
+                        parameters[8] = 0x10;     // 16bit - A
+                        parameters[9] = 0x00;     // 16bit - B
+                        parameters[10] = 0x02;     // RANGE
+                        parameters[11] = 0x01;     // array_count(1)
+                        parameters[12] = 0x08;     // 8G - A
+                        parameters[13] = 0x00;     // 8G - B
                         break;
                 }
             }
@@ -166,68 +154,131 @@ namespace SDKTemplate
 
         public class PmdControlPointResponse
         {
-            public PmdStreamSettings streamSettings = null;
+            public string stringHex;
             public PmdResponseCode responseCode;
-            public PmdControlPointCommand opCode;
-            public MeasurementSensor measurementType;
+
+            // When response from Read Supported Measurements
+            private enum SupportedStreamsCode : byte
+            {
+                ECG_SUPPORTED = 0x01,
+                PPG_SUPPORTED = 0x02,
+                ACC_SUPPORTED = 0x04,
+                PPI_SUPPORTED = 0x08,
+            }
+            bool readAvailableMeasurements = false;
+            bool EcgSupported;
+            bool PpgSupported;
+            bool AccSupported;
+            bool PpiSupported;
+
+
+            // When response from Streaming Requests
+
+            public enum MeasurementSettingType
+            {
+                SAMPLE_RATE = 0x00,
+                RESOLUTION = 0x01,
+                RANGE = 0x02,
+            }
+            public PmdControlPointCommand opCode = PmdControlPointCommand.NULL;
+            public MeasurementType measurementType;
             public PmdControlPointResponseCode status;
             public IBuffer parameters;
             public bool more;
-            public string stringHex;
-
-            public enum PmdControlPointResponseCode
-            {
-                SUCCESS = 0x00,
-                ERROR_INVALID_OP_CODE = 0x01,
-
-                ERROR_INVALID_MEASUREMENT_TYPE = 0x02,
-                ERROR_NOT_SUPPORTED = 0x03,
-                ERROR_INVALID_LENGTH = 0x04,
-                ERROR_INVALID_PARAMETER = 0x05,
-                ERROR_INVALID_STATE = 0x06,
-                ERROR_INVALID_RESOLUTION = 0x07,
-                ERROR_INVALID_SAMPLE_RATE = 0x08,
-                ERROR_INVALID_RANGE = 0x09,
-                ERROR_INVALID_MTU = 0x0A,
-            }
+            public string streamSettingsString = "";
 
             public PmdControlPointResponse(byte[] data)
             {
                 stringHex = BitConverter.ToString(data);
                 responseCode = (PmdResponseCode) data[0];
-                opCode = (PmdControlPointCommand) data[1];
-                measurementType = (MeasurementSensor) data[2];
-                status = (PmdControlPointResponseCode) data[3];
-                if (status == PmdControlPointResponseCode.SUCCESS)
-                {
 
-                    // Stream Settings
-                    if (responseCode.Equals(PmdResponseCode.STREAM_SETTINGS_RESPONSE))
+                if (responseCode.Equals(PmdResponseCode.FEATURES_READ_RESPONSE))
+                {
+                    // Byte that contains which measurements are supported
+                    byte settingsByte = data[1];
+
+                    readAvailableMeasurements = true;
+                    EcgSupported = (settingsByte & (byte)SupportedStreamsCode.ECG_SUPPORTED) != 0;
+                    PpgSupported = (settingsByte & (byte)SupportedStreamsCode.PPG_SUPPORTED) != 0;
+                    AccSupported = (settingsByte & (byte)SupportedStreamsCode.ACC_SUPPORTED) != 0;
+                    PpiSupported = (settingsByte & (byte)SupportedStreamsCode.PPI_SUPPORTED) != 0;
+                }
+                else if(responseCode.Equals(PmdResponseCode.CONTROL_POINT_RESPONSE))
+                {
+                    // Response from Streaming Request
+                    opCode = (PmdControlPointCommand)data[1];
+                    measurementType = (MeasurementType)data[2];
+                    status = (PmdControlPointResponseCode)data[3];
+                    more = data.Length > 4 && data[4] != 0;
+
+                    // Response is from setup of streaming
+                    if (opCode == PmdControlPointCommand.GET_MEASUREMENT_SETTINGS)
                     {
-                        streamSettings = new PmdStreamSettings((byte)opCode);
+                        // Translate the setup bytes to text when answer includes data
+                        switch (measurementType)
+                        {
+                            case MeasurementType.ECG:
+                                                    // SAMPLE_RATE: 19 00 = 25hz , 32 00 = 50hz, 64 00 = 100hz, C8 00 = 200hz
+                                streamSettingsString = $"\t{(MeasurementSettingType)data[5]} = {BitConverter.ToUInt16(data, 7)} Hz\n" +
+                                    // RESOLUTION: 10 00 = 16bit
+                                    $"\t{(MeasurementSettingType)data[9]} = {BitConverter.ToUInt16(data, 11)} bit\n";
+                                break;
+                            case MeasurementType.ACC:
+                                                        // SAMPLE_RATE: 19 00 = 25hz , 32 00 = 50hz, 64 00 = 100hz, C8 00 = 200hz
+                                streamSettingsString = $"\t{(MeasurementSettingType)data[5]} = {BitConverter.ToUInt16(data, 7)} Hz\n" +
+                                    // RESOLUTION: 10 00 = 16bit
+                                    $"\t{(MeasurementSettingType)data[9]} = {BitConverter.ToUInt16(data, 11)} bit\n" +
+                                    // RANGE: 02 00 = 2G , 04 00 = 4G , 08 00 = 8G
+                                    $"\t{(MeasurementSettingType)data[13]} = {BitConverter.ToUInt16(data, 15)} G\n";
+                                break;
+                            default:
+                                break;
+                        }
                     }
 
-                    // More data
-                    more = data.Length > 4 && data[4] != 0;
+                    // COPY OF MORE PARAMETERS WHEN THEY EXIST
                     if (data.Length > 5)
                     {
                         // Copy the remaining data in a new variable
                         byte[] additional_data = new byte[data.Length - 5];
-                        Array.Copy(data, 5, additional_data, 0, data.Length - 5); //IN JAVA: .write(data, 5, data.Length - 5);
+                        Array.Copy(data, 5, additional_data, 0, data.Length - 5);
 
                         DataWriter writer = new DataWriter();
                         writer.WriteBytes(additional_data);
                         parameters = writer.DetachBuffer();
                     }
+
                 }
             }
 
             public override string ToString()
             {
-                return $"PmdControlPoint >> " +
-                    $"StreamSettings:{streamSettings}\n" +
-                    $"\tResponseCode: {responseCode} | opCode: {opCode} | Sensor: {measurementType} | Status:{status} | More bytes:{more}";
+                string text = $"PmdControlPoint >> ";
+
+                if (readAvailableMeasurements)
+                text += $"Available Measurements:" +
+                        $"\n\t- EcgSupported:\t{EcgSupported}" +
+                        $"\n\t- PpgSupported:\t{PpgSupported}" +
+                        $"\n\t- AccSupported:\t{AccSupported}" +
+                        $"\n\t- PpiSupported:\t{PpiSupported}\n";
+
+                if (!opCode.Equals(PmdControlPointCommand.NULL))
+                {
+                    text += $"Status: {status} | opCode: {opCode} | Feature: {measurementType} \n";
+
+                    if (streamSettingsString.CompareTo("") != 0)
+                        text += $"Streaming Settings: \n{streamSettingsString}\n";
+                }
+                    
+                    
+
+                return text;
             }
+        }
+
+        public class PmdDataResponse
+        {
+            // TODO: Implement classes to parse streaming from sensor
         }
 
         public class BatteryData
@@ -306,9 +357,16 @@ namespace SDKTemplate
 
             public override string ToString()
             {
-                return $"HeartRateMeasurementData >> " +
-                    $"packetSize:{size} | HR_UINT16:{formatUINT16} | has_EE:{hasEnergyExpenditure} | has_RR:{hasRRinterval} \n" +
-                    $"\tHR={HR} | EE={EE} | RR={RR:F3}";
+                string text = $"HeartRateMeasurementData >> ";
+                text += $"packetSize:{size} | HR_UINT16:{formatUINT16} | has_EE:{hasEnergyExpenditure} | has_RR:{hasRRinterval} \n";
+
+                text += $"\tHR={HR}bpm";
+                if (hasEnergyExpenditure)
+                    text += $"| EE={EE}kJ ";
+                if (hasRRinterval)
+                    text += $"| RR={RR:F3}ms";
+
+                return text;
             }
         }
 

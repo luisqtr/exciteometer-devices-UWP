@@ -446,7 +446,7 @@ namespace SDKTemplate
 
         private async void SettingsECG_Click()
         {
-            IBuffer bufferRequest = BLE_PolarH10.CreateStreamingRequest(BLE_PolarH10.PmdControlPointCommand.GET_MEASUREMENT_SETTINGS, BLE_PolarH10.MeasurementSensor.ECG);
+            IBuffer bufferRequest = BLE_PolarH10.CreateStreamingRequest(BLE_PolarH10.PmdControlPointCommand.GET_MEASUREMENT_SETTINGS, BLE_PolarH10.MeasurementType.ECG);
             if (await CharacteristicWriteIBuffer(PmdControlPointCharacteristic, bufferRequest))
             {
                 AppendConsoleText("ECG settings requested...");
@@ -459,7 +459,7 @@ namespace SDKTemplate
 
         private async void SettingsACC_Click()
         {
-            IBuffer bufferRequest = BLE_PolarH10.CreateStreamingRequest(BLE_PolarH10.PmdControlPointCommand.GET_MEASUREMENT_SETTINGS, BLE_PolarH10.MeasurementSensor.ACC);
+            IBuffer bufferRequest = BLE_PolarH10.CreateStreamingRequest(BLE_PolarH10.PmdControlPointCommand.GET_MEASUREMENT_SETTINGS, BLE_PolarH10.MeasurementType.ACC);
             if (await CharacteristicWriteIBuffer(PmdControlPointCharacteristic, bufferRequest))
             {
                 AppendConsoleText("ACC settings requested...");
@@ -529,7 +529,7 @@ namespace SDKTemplate
                     }
                     
                     // Streaming Request
-                    IBuffer bufferRequest = BLE_PolarH10.CreateStreamingRequest(BLE_PolarH10.PmdControlPointCommand.REQUEST_MEASUREMENT_START, BLE_PolarH10.MeasurementSensor.ECG);
+                    IBuffer bufferRequest = BLE_PolarH10.CreateStreamingRequest(BLE_PolarH10.PmdControlPointCommand.REQUEST_MEASUREMENT_START, BLE_PolarH10.MeasurementType.ECG);
                     if (await CharacteristicWriteIBuffer(PmdControlPointCharacteristic, bufferRequest))
                     {
                         AppendConsoleText("ECG Stream has started");
@@ -542,7 +542,7 @@ namespace SDKTemplate
                 else
                 {
                     // STOP ECG STREAMING
-                    IBuffer bufferRequest = BLE_PolarH10.CreateStreamingRequest(BLE_PolarH10.PmdControlPointCommand.STOP_MEASUREMENT, BLE_PolarH10.MeasurementSensor.ECG);
+                    IBuffer bufferRequest = BLE_PolarH10.CreateStreamingRequest(BLE_PolarH10.PmdControlPointCommand.STOP_MEASUREMENT, BLE_PolarH10.MeasurementType.ECG);
                     if (await CharacteristicWriteIBuffer(PmdControlPointCharacteristic, bufferRequest))
                     {
                         AppendConsoleText("ECG Stream has been stopped");
@@ -580,7 +580,7 @@ namespace SDKTemplate
                     }
 
                     // Streaming Request
-                    IBuffer bufferRequest = BLE_PolarH10.CreateStreamingRequest(BLE_PolarH10.PmdControlPointCommand.REQUEST_MEASUREMENT_START, BLE_PolarH10.MeasurementSensor.ACC);
+                    IBuffer bufferRequest = BLE_PolarH10.CreateStreamingRequest(BLE_PolarH10.PmdControlPointCommand.REQUEST_MEASUREMENT_START, BLE_PolarH10.MeasurementType.ACC);
                     if (await CharacteristicWriteIBuffer(PmdControlPointCharacteristic, bufferRequest))
                     {
                         AppendConsoleText("ACC Stream has started");
@@ -593,7 +593,7 @@ namespace SDKTemplate
                 else
                 {
                     // STOP ACC STREAMING
-                    IBuffer bufferRequest = BLE_PolarH10.CreateStreamingRequest(BLE_PolarH10.PmdControlPointCommand.STOP_MEASUREMENT, BLE_PolarH10.MeasurementSensor.ACC);
+                    IBuffer bufferRequest = BLE_PolarH10.CreateStreamingRequest(BLE_PolarH10.PmdControlPointCommand.STOP_MEASUREMENT, BLE_PolarH10.MeasurementType.ACC);
                     if (await CharacteristicWriteIBuffer(PmdControlPointCharacteristic, bufferRequest))
                     {
                         AppendConsoleText("ACC Stream has been stopped");
@@ -788,15 +788,22 @@ namespace SDKTemplate
                 BLE_PolarH10.HeartRateMeasurementData response = new BLE_PolarH10.HeartRateMeasurementData(data);
                 AppendConsoleText($"{response}");
             }
-            // Response from Stream PMD Data
-            else if (sender.Uuid.Equals(BLE_PolarH10.PMD_DATA))
+            // Response from Stream PMD Control Point
+            else if (sender.Uuid.Equals(BLE_PolarH10.PMD_CP))
             {
+                // Response is from Settings Request or about to start streaming
                 BLE_PolarH10.PmdControlPointResponse response = new BLE_PolarH10.PmdControlPointResponse(data);
                 AppendConsoleText($"{response}");
             }
+            // Response from Stream PMD Data
+            else if (sender.Uuid.Equals(BLE_PolarH10.PMD_DATA))
+            {
+                // Response is already a streaming value
+                AppendConsoleText($"Response PMD Data: {BitConverter.ToString(data)}");
+            }
             else
             {
-                AppendConsoleText($"Data Received from unknown characteristic: {BitConverter.ToString(data)}");
+                AppendConsoleText($"Data from unknown characteristic uuid: {sender.Uuid} | Data: {BitConverter.ToString(data)}");
             }
 
             Debug.WriteLine("Received:" + newValue + " from " + sender.ToString());
