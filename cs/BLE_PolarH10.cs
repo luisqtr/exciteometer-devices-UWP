@@ -7,12 +7,18 @@
 //*********************************************************
 
 using System;
+using System.IO;
 using System.Collections.Generic;
-using Windows.Devices.Bluetooth.Advertisement;
 using Windows.Storage.Streams;
+using Windows.UI.Xaml.Controls;
 
-namespace SDKTemplate
+namespace ExciteOMeter
 {
+    /// <summary>
+    /// Processes all the data exchanged from the Polar H10 through
+    /// Bluetooth LE protocol. Mapping the hexadecimal values to
+    /// readable strings.
+    /// </summary>
     class BLE_PolarH10
     {
         // Battery
@@ -24,17 +30,22 @@ namespace SDKTemplate
         public static readonly Guid BODY_SENSOR_LOCATION    = new Guid("00002a38-0000-1000-8000-00805f9b34fb"); // NOT USED
         public static readonly Guid HR_MEASUREMENT          = new Guid("00002a37-0000-1000-8000-00805f9b34fb");
 
-        // Streaming Measurement
+        // Polar Measurement Data (PMD)
         public static readonly Guid PMD_SERVICE     = new Guid("FB005C80-02E7-F387-1CAD-8ACD2D8DF0C8");
         public static readonly Guid PMD_DATA        = new Guid("FB005C82-02E7-F387-1CAD-8ACD2D8DF0C8");
         public static readonly Guid PMD_CP          = new Guid("FB005C81-02E7-F387-1CAD-8ACD2D8DF0C8");
 
-        public enum PmdResponseCode
-        {
-            FEATURES_READ_RESPONSE = 0x0F,
-            CONTROL_POINT_RESPONSE = 0xF0,
-        }
+        // Instances of objects to store data from 
+        public static BatteryData batteryData = new BatteryData();
+        public static HeartRateMeasurementData hrmData = new HeartRateMeasurementData();
+        public static PmdControlPointResponse pmdCpResponse = new PmdControlPointResponse();
+        public static PmdDataResponse pmdDataResponse = new PmdDataResponse();
 
+        public static string docPath = Windows.Storage.ApplicationData.Current.LocalFolder.Path;
+
+        /// <summary>
+        /// Type of actions to execute in the PMD Control Point
+        /// </summary>
         public enum PmdControlPointCommand
         {
             NULL = 0x00,
@@ -42,6 +53,10 @@ namespace SDKTemplate
             REQUEST_MEASUREMENT_START = 0x02,
             STOP_MEASUREMENT = 0x03,
         }
+
+        /// <summary>
+        /// Readable response from the Control Point of the PMD service.
+        /// </summary>
         public enum PmdControlPointResponseCode
         {
             SUCCESS = 0x00,
@@ -58,14 +73,14 @@ namespace SDKTemplate
             ERROR_INVALID_MTU = 0x0A,
         }
 
+        /// <summary>
+        /// Available sensors in Polar devices
+        /// </summary>
         public enum MeasurementType
         {
-            // Supported by Polar H10
-            ECG = 0x00,     // Electrocardiographic Signal
-            ACC = 0x02,     // Accelerometer Signal
-
-            // Not supported by Polar H10
+            ECG = 0x00,     // Electrocardiographic Signal  // Supported by Polar H10
             PPG = 0x01,
+            ACC = 0x02,     // Accelerometer Signal         // Supported by Polar H10
             PPI = 0x03,
             BIOZ = 0x04,
             GYRO = 0x05,
@@ -79,13 +94,13 @@ namespace SDKTemplate
         /// <summary>
         /// Create ATT package based on API instructions
         /// </summary>
-        /// <param name="command"></param>
-        /// <param name="sensor"></param>
+        /// <param name="command">Type of command to execute on the device. Use enum PmdControlPointCommand</param>
+        /// <param name="sensor">Type of sensor to stream data from. Use enum MeasurementType</param>
         /// <param name="additionalData"></param>
         /// <returns></returns>
         public static IBuffer CreateStreamingRequest(PmdControlPointCommand command, MeasurementType sensor /*ADD PARAMETERS FOR SPECIFIC SETUP OF STREAMING*/)
         {
-            int numBytes = 0;
+            int numBytes;
             byte[] parameters = null;
 
             if (command == PmdControlPointCommand.GET_MEASUREMENT_SETTINGS || command == PmdControlPointCommand.STOP_MEASUREMENT)
@@ -146,14 +161,26 @@ namespace SDKTemplate
             return writer.DetachBuffer();
         }
 
+
         /*
          * 
          * CLASSES DEFINITIONS
          * 
          * */
-
+        /// <summary>
+        /// Structure of data received from PMD Control Point.
+        /// Indicates the settings of the devices and activation of
+        /// data streaming.
+        /// </summary>
         public class PmdControlPointResponse
         {
+            // Types of response from PMD CP
+            public enum PmdResponseCode
+            {
+                NULL = 0x00,
+                FEATURES_READ_RESPONSE = 0x0F,
+                CONTROL_POINT_RESPONSE = 0xF0,
+            }
             public string stringHex;
             public PmdResponseCode responseCode;
 
@@ -165,21 +192,20 @@ namespace SDKTemplate
                 ACC_SUPPORTED = 0x04,
                 PPI_SUPPORTED = 0x08,
             }
-            bool readAvailableMeasurements = false;
-            bool EcgSupported;
-            bool PpgSupported;
-            bool AccSupported;
-            bool PpiSupported;
+            public bool readAvailableMeasurements = false;
+            public bool EcgSupported;
+            public bool PpgSupported;
+            public bool AccSupported;
+            public bool PpiSupported;
 
-
-            // When response from Streaming Requests
-
+            // For response from Polar Measurement Settings
             public enum MeasurementSettingType
             {
                 SAMPLE_RATE = 0x00,
                 RESOLUTION = 0x01,
                 RANGE = 0x02,
             }
+
             public PmdControlPointCommand opCode = PmdControlPointCommand.NULL;
             public MeasurementType measurementType;
             public PmdControlPointResponseCode status;
@@ -187,8 +213,35 @@ namespace SDKTemplate
             public bool more;
             public string streamSettingsString = "";
 
-            public PmdControlPointResponse(byte[] data)
+            public PmdControlPointResponse()
             {
+                SetDefaultValues();
+            }
+
+            private void SetDefaultValues()
+            {
+                stringHex = "";
+                responseCode = PmdResponseCode.NULL;
+
+                readAvailableMeasurements = false;
+                EcgSupported = false;
+                PpgSupported = false;
+                AccSupported = false;
+                PpiSupported = false;
+
+                opCode = PmdControlPointCommand.NULL;
+                measurementType = MeasurementType.UNKNOWN_TYPE;
+                status = PmdControlPointResponseCode.ERROR_NOT_SUPPORTED;
+                parameters = null;
+                more = false;
+                streamSettingsString = "";
+            }
+
+            public void UpdateData(byte[] data)
+            {
+                // Restart values before setting new values
+                SetDefaultValues();
+
                 stringHex = BitConverter.ToString(data);
                 responseCode = (PmdResponseCode) data[0];
 
@@ -214,22 +267,62 @@ namespace SDKTemplate
                     // Response is from setup of streaming
                     if (opCode == PmdControlPointCommand.GET_MEASUREMENT_SETTINGS)
                     {
+                        short offset = 5; // Variable to keep track of where to read the byte array
+                        ushort array_count = 0;
                         // Translate the setup bytes to text when answer includes data
                         switch (measurementType)
                         {
                             case MeasurementType.ECG:
-                                                    // SAMPLE_RATE: 19 00 = 25hz , 32 00 = 50hz, 64 00 = 100hz, C8 00 = 200hz
-                                streamSettingsString = $"\t{(MeasurementSettingType)data[5]} = {BitConverter.ToUInt16(data, 7)} Hz\n" +
-                                    // RESOLUTION: 10 00 = 16bit
-                                    $"\t{(MeasurementSettingType)data[9]} = {BitConverter.ToUInt16(data, 11)} bit\n";
+                                // SAMPLE_RATE: 19 00 = 25hz , 32 00 = 50hz, 64 00 = 100hz, C8 00 = 200hz
+                                streamSettingsString += $"\t{(MeasurementSettingType)data[offset++]}:";
+                                // Read array_count and print the sample rate in correct units
+                                array_count = data[offset++];
+                                for (int i = 0; i < array_count; i++)
+                                {
+                                    streamSettingsString += $"\t{BitConverter.ToUInt16(data, offset)}Hz";
+                                    offset += 2;
+                                }
+
+                                // RESOLUTION: 10 00 = 16bit
+                                streamSettingsString += $"\n\t{(MeasurementSettingType)data[offset++]}:";
+                                // Read array_count and print the sample rate in correct units
+                                array_count = data[offset++];
+                                for (int i = 0; i < array_count; i++)
+                                {
+                                    streamSettingsString += $"\t{BitConverter.ToUInt16(data, offset)}-bit";
+                                    offset += 2;
+                                }
                                 break;
                             case MeasurementType.ACC:
-                                                        // SAMPLE_RATE: 19 00 = 25hz , 32 00 = 50hz, 64 00 = 100hz, C8 00 = 200hz
-                                streamSettingsString = $"\t{(MeasurementSettingType)data[5]} = {BitConverter.ToUInt16(data, 7)} Hz\n" +
-                                    // RESOLUTION: 10 00 = 16bit
-                                    $"\t{(MeasurementSettingType)data[9]} = {BitConverter.ToUInt16(data, 11)} bit\n" +
-                                    // RANGE: 02 00 = 2G , 04 00 = 4G , 08 00 = 8G
-                                    $"\t{(MeasurementSettingType)data[13]} = {BitConverter.ToUInt16(data, 15)} G\n";
+                                // SAMPLE_RATE: 19 00 = 25hz , 32 00 = 50hz, 64 00 = 100hz, C8 00 = 200hz
+                                streamSettingsString += $"\t{(MeasurementSettingType)data[offset++]}:";
+                                // Read array_count and print the sample rate in correct units
+                                array_count = data[offset++];
+                                for (int i = 0; i < array_count; i++)
+                                {
+                                    streamSettingsString += $"\t{BitConverter.ToUInt16(data, offset)}Hz";
+                                    offset += 2;
+                                }
+
+                                // RESOLUTION: 10 00 = 16bit
+                                streamSettingsString += $"\n\t{(MeasurementSettingType)data[offset++]}:";
+                                // Read array_count and print the sample rate in correct units
+                                array_count = data[offset++];
+                                for (int i = 0; i < array_count; i++)
+                                {
+                                    streamSettingsString += $"\t{BitConverter.ToUInt16(data, offset)}-bit";
+                                    offset += 2;
+                                }
+
+                                // RANGE: 02 00 = 2G , 04 00 = 4G , 08 00 = 8G
+                                streamSettingsString += $"\n\t{(MeasurementSettingType)data[offset++]}:";
+                                // Read array_count and print the sample rate in correct units
+                                array_count = data[offset++];
+                                for (int i = 0; i < array_count; i++)
+                                {
+                                    streamSettingsString += $"\t{BitConverter.ToUInt16(data, offset)}G";
+                                    offset += 2;
+                                }
                                 break;
                             default:
                                 break;
@@ -267,25 +360,103 @@ namespace SDKTemplate
                     text += $"Status: {status} | opCode: {opCode} | Feature: {measurementType} \n";
 
                     if (streamSettingsString.CompareTo("") != 0)
-                        text += $"Streaming Settings: \n{streamSettingsString}\n";
+                        text += $"{streamSettingsString}";
                 }
-                    
-                    
+                return text;
+            }
+        }
+
+        /// <summary>
+        /// Structure of data received from PMD Streaming. This class maps
+        /// to EcgData or AccData according the `MeasurementType`
+        /// </summary>
+        public class PmdDataResponse
+        {
+            public string stringHex = "";
+            public MeasurementType measurementType;
+            public ulong timestamp;
+            public FrameType frameType; // Each sample is 3, 6 or 9 bytes?
+
+            public int numSamples;      // Samples in
+            public string streamString = "";
+
+            public static EcgData ECG = new EcgData();
+            public static AccData ACC = new AccData();
+
+            public PmdDataResponse()
+            {
+                SetDefaultValues();
+            }
+
+            private void SetDefaultValues()
+            {
+                stringHex = "";
+                measurementType = MeasurementType.UNKNOWN_TYPE;
+                timestamp = 0;     // last sample timestamp in nS
+                numSamples = 0;      // Samples in
+                frameType = FrameType.NULL;
+                //EcgData and AccData are defaulted inside their own class.
+                streamString = "";
+            }
+
+            public void UpdateData(byte[] data)
+            {
+                // Restart values before setting new values
+                SetDefaultValues();
+
+                stringHex = BitConverter.ToString(data);
+                measurementType = (MeasurementType)data[0];
+                timestamp = BitConverter.ToUInt64(data, 1); // Reads 8 bytes from array
+                frameType = (FrameType)data[9];
+                numSamples = (data.Length - 10) / 3; // Reduce the header, each sample is 3 bytes
+
+                switch (measurementType)
+                {
+                    case MeasurementType.ECG:
+                        ECG.UpdateData(data);
+                        break;
+                    case MeasurementType.ACC:
+                        ACC.UpdateData(data);
+                        break;
+                    default:
+                        break;
+                }
+
+            }
+            public override string ToString()
+            {
+                string text = $"PmdDataResponse >> Measurement Type: {measurementType}";
+                text += $"\tTimestamp={timestamp} nS | Num Samples={numSamples}";
+
+                if (streamString.CompareTo("") != 0)
+                    text += $"Data: \n{streamString}\n";
 
                 return text;
             }
         }
 
-        public class PmdDataResponse
-        {
-            // TODO: Implement classes to parse streaming from sensor
-        }
-
+        /// <summary>
+        /// Structure of data received from Battery Service
+        /// </summary>
         public class BatteryData
         {
             public ushort battery; // 16-bit
-            public BatteryData(byte[] value)
+
+            public BatteryData()
             {
+                SetDefaultValues();
+            }
+
+            private void SetDefaultValues()
+            {
+                battery = 0;
+            }
+
+            public void UpdateData(byte[] value)
+            {
+                // Restart values before setting new values
+                SetDefaultValues();
+
                 // Converts HEX number to INT
                 battery = value[0];
             }
@@ -301,6 +472,9 @@ namespace SDKTemplate
             }
         }
 
+        /// <summary>
+        /// Structure of data received from Heart Rate Measurement Service
+        /// </summary>
         public class HeartRateMeasurementData
         {
             public int size;
@@ -308,7 +482,7 @@ namespace SDKTemplate
 
             // FLAGS BYTE
             public bool formatUINT16 = false;           // bit0   | 0:UINT8, 1:UINT16
-            public byte sensorContact;                  // bit1-2 | NOT USED >> Sensor contact feature
+            public byte sensorContact = 0;                  // bit1-2 | NOT USED >> Sensor contact feature
             public bool hasEnergyExpenditure = false;   // bit3   | 1: Includes Values Energy Expenditure
             public bool hasRRinterval = false;          // bit4   | 1: Values RR interval are present
                                                         // bit5-8 | RESERVED
@@ -316,8 +490,32 @@ namespace SDKTemplate
             public ushort EE = 0;                       // Energy Expended | Unit: Kilo Joules
             public float  RR = 0;                       // RR-interval | Unit: ms
 
-            public HeartRateMeasurementData(byte[] value)
+            public HeartRateMeasurementData()
             {
+                SetDefaultValues();
+            }
+
+            private void SetDefaultValues()
+            {
+                size = 0;
+                flagsByte = 0;
+
+                // FLAGS BYTE
+                formatUINT16 = false;
+                sensorContact = 0;
+                hasEnergyExpenditure = false;
+                hasRRinterval = false;
+
+                HR = 0;
+                EE = 0;
+                RR = 0;
+        }
+
+            public void UpdateData(byte[] value)
+            {
+                // Restart values before setting new values
+                SetDefaultValues();
+
                 size = value.Length;
                 flagsByte = value[0];
 
@@ -370,47 +568,79 @@ namespace SDKTemplate
             }
         }
 
+
+        /// <summary>
+        /// How is each sample coded in the data stream?
+        /// </summary>
+        public enum FrameType : byte
+        {
+            NULL = 0xFF,  // DEFAULT VALUE - INVALID
+            T3_BYTES = 0, // Type is: ACC=x,y,z * 8-bit  | ECG=24-bit uV
+            T6_BYTES = 1, // Type is: ACC=x,y,z * 16-bit | ECG=(Not available)
+            T9_BYTES = 2, // Type is: ACC=x,y,z * 24-bit | ECG=(Not available)
+        }
+
+        /// <summary>
+        /// Structure of data received from PMD for ECG
+        /// </summary>
         public class EcgData
         {
-            public class EcgSample
+            public struct EcgSample
             {
-                // samples in signed microvolts
-                //public PmdEcgDataType type;
-                public long timeStamp;
-                public int microVolts;
-                public bool overSampling;
-                public byte skinContactBit;
-                public byte contactImpedance;
-
-                public byte ecgDataTag;
-                public byte paceDataTag;
+                public int microVolts; // Samples in signed microvolts
             }
-            public long timeStamp;
+
             public List<EcgSample> ecgSamples = new List<EcgSample>();
 
-            public EcgData(byte type, byte[] value, long timeStamp)
+            public EcgData()
             {
-                int offset = 0;
-                this.timeStamp = timeStamp;
-                while (offset < value.Length)
+                SetDefaultValues();
+            }
+
+            private void SetDefaultValues()
+            {
+                ecgSamples.Clear();
+            }
+
+            public void UpdateData(byte[] data)
+            {
+                // Restart values before setting new values
+                SetDefaultValues();
+
+                int offset = 10; // Variable to keep track of where to read the byte array
+
+                // Print Debug text
+                string text = "Samples: ";
+                string textHEX = "Samples HEX: ";
+
+                while (offset < data.Length)
                 {
                     EcgSample sample = new EcgSample();
-                    //sample.type = PmdEcgDataType.values()[type];
-                    sample.timeStamp = timeStamp;
 
-                    //if (type == 0)
-                    //{ // production
-                    sample.microVolts = 0;///BleUtils.convertArrayToSignedInt(value, offset, 3);
-                    //}
-                    offset += 3;
+                    // Take only three bytes and put it in a four-byte-long array
+                    byte[] value = new byte[] { 0x00, data[offset], data[offset+1], data[offset+2] };
+                    sample.microVolts = BitConverter.ToInt32(value, 0);
+                    offset += 3; // Every sample is 3-Bytes
+
                     ecgSamples.Add(sample);
+
+                    // Print results
+                    text += $"{sample.microVolts},";
+                    textHEX += $"{BitConverter.ToString(data, offset-3, 3).Replace("-", string.Empty)},";
                 }
+
+                /// SEND DATA THROUGH LSL
+                System.Diagnostics.Debug.WriteLine(text);
+                System.Diagnostics.Debug.WriteLine(textHEX);
             }
         }
 
+        /// <summary>
+        /// Structure of data received from PMD for Accelerometer
+        /// </summary>
         public class AccData
         {
-            public class AccSample
+            public struct AccSample
             {
                 public readonly int x;
                 public readonly int y;
@@ -423,25 +653,79 @@ namespace SDKTemplate
                     this.z = z;
                 }
             }
-            public readonly List<AccSample> accSamples = new List<AccSample>();
-            public readonly long timeStamp;
+            public List<AccSample> accSamples = new List<AccSample>();
 
-            public AccData(byte type, byte[] value, long timeStamp)
+            public AccData()
             {
-                int offset = 0;
-                this.timeStamp = timeStamp;
-                int resolution = (type + 1) * 8;
-                int z, y, x, step = (int)Math.Ceiling((double)resolution / 8.0);
-                while (offset < value.Length)
+                SetDefaultValues();
+            }
+
+            private void SetDefaultValues()
+            {
+                accSamples.Clear();
+            }
+
+            public void UpdateData(byte[] data)
+            {
+                // Restart values before setting new values
+                SetDefaultValues();
+
+                int offset = 9; // Variable to keep track of where to read the byte array
+                FrameType type = (FrameType)data[offset]; // Encoded in 3, 6 or 9 bytes
+                offset++;
+
+                // Step: How many bytes to move to find other axis data.
+                int step = (int)type + 1; // If type=1(16-bit), next value is 2 bytes away.
+
+                // Print Debug text
+                string text = "Samples: ";
+                
+                // Intermediate variables to parse HEX data
+                int x=0, y=0, z=0;
+                byte[] value;
+
+                while (offset < data.Length)
                 {
-                    x = 100;//BleUtils.convertArrayToSignedInt(value, offset, step);
-                    offset += step;
-                    y = 200;//BleUtils.convertArrayToSignedInt(value, offset, step);
-                    offset += step;
-                    z = 300;//BleUtils.convertArrayToSignedInt(value, offset, step);
-                    offset += step;
-                    accSamples.Add(new AccSample(x, y, z));
+                    // Read specific number of bytes
+                    switch (type)
+                    {
+                        case FrameType.T3_BYTES:
+                            x = data[offset];
+                            offset += step;
+                            y = data[offset];
+                            offset += step;
+                            z = data[offset];
+                            offset += step;
+                            break;
+                        case FrameType.T6_BYTES:
+                            x = BitConverter.ToInt16(data, offset);
+                            offset += step;
+                            y = BitConverter.ToInt16(data, offset);
+                            offset += step;
+                            z = BitConverter.ToInt16(data, offset);
+                            offset += step;
+                            break;
+                        case FrameType.T9_BYTES:
+                            value = new byte[] { 0x00, data[offset], data[offset + 1], data[offset + 2] };
+                            x = BitConverter.ToInt32(value, 0);
+                            offset += step;
+                            value = new byte[] { 0x00, data[offset], data[offset + 1], data[offset + 2] };
+                            y = BitConverter.ToInt32(value, 0);
+                            offset += step;
+                            value = new byte[] { 0x00, data[offset], data[offset + 1], data[offset + 2] };
+                            z = BitConverter.ToInt32(value, 0);
+                            offset += step;
+                            break;
+                    }
+
+                    accSamples.Add(new AccSample(x,y,z));
+
+                    // Print results
+                    text += $"{x}|{y}|{z},";
                 }
+
+                /// SEND DATA THROUGH LSL
+                System.Diagnostics.Debug.WriteLine(text);
             }
         }
 

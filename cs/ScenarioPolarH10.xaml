@@ -17,12 +17,14 @@
     mc:Ignorable="d">
     <!--<ScrollViewer Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" Padding="12,10,12,12" VerticalScrollMode="Disabled">-->
     <StackPanel Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" Padding="12,10,12,12">
-        <TextBlock Text="Description:" Style="{StaticResource SampleHeaderTextStyle}"/>
-        <TextBlock Style="{StaticResource ScenarioDescriptionTextStyle}" Text="Query services from GATT server"/>
+        <TextBlock Text="Setup Polar H10" Style="{StaticResource SampleHeaderTextStyle}"/>
+        <TextBlock Style="{StaticResource ScenarioDescriptionTextStyle}">
+            Setups the Bluetooth Low Energy device selected in the tab 'Discover Servers'.
+        </TextBlock>
         <TextBlock TextWrapping="Wrap" Margin="0,10,0,0">
-                This scenario connects to the Bluetooth Low Energy device
-                selected in the "Discover GATT Servers" scenario
-                and communicates with the device.
+            Choose the sources of data that are wanted to be streamed from the Polar H10 chest strap.
+            All the selected measurements are automatically broadcasted to the network using
+            the Lab Streaming Layer (LSL) protocol (https://labstreaminglayer.readthedocs.io/).
         </TextBlock>
         <TextBlock Style="{StaticResource ListItemTextStyle}" TextWrapping="Wrap" Margin="0,10,0,0">
                 Selected device: <Run x:Name="SelectedDeviceRun" FontWeight="Bold"/>
@@ -34,24 +36,26 @@
             </StackPanel>
             <StackPanel Orientation="Vertical">
                 <ToggleSwitch x:Name="toggleECG" Header="ECG" IsOn="False" Toggled="ToggleECG_Toggled"/>
-                <Button Content="Settings" Click="{x:Bind SettingsECG_Click}" Margin="0,0,0,0" FontSize="10"/>
+                <Button Content="Settings" Click="{x:Bind SettingsECG_Click}" Margin="0,0,0,0" FontSize="12"/>
             </StackPanel>
             <StackPanel Orientation="Vertical">
                 <ToggleSwitch x:Name="toggleACC" Header="Accelerometer" IsOn="False" Toggled="ToggleACC_Toggled"/>
-                <Button Content="Settings" Click="{x:Bind SettingsACC_Click}" Margin="0,0,0,0" FontSize="10"/>
+                <Button Content="Settings" Click="{x:Bind SettingsACC_Click}" Margin="0,0,0,0" FontSize="12"/>
             </StackPanel>
             <StackPanel Orientation="Vertical">
                 <TextBlock Text="Battery Level" Style="{StaticResource SampleHeaderTextStyle}" Height="30" FontSize="15"/>
                 <TextBlock x:Name="textBatteryLevel" Text="100%" Style="{StaticResource SampleHeaderTextStyle}" Height="30" FontSize="15" FontWeight="Bold" VerticalAlignment="Center"/>
-                <Button Content="Refresh" Click="{x:Bind ReadBattery_Click}" Margin="0,0,0,0" FontSize="10"/>
+                <Button Content="Refresh" Click="{x:Bind ReadBattery_Click}" Margin="0,0,0,0" FontSize="12"/>
             </StackPanel>
         </StackPanel>
         <StackPanel Orientation="Vertical">
             <StackPanel Orientation="Horizontal" Margin="0,25,0,0">
-                <TextBlock Text="LOG EVENTS"/>
-                <CheckBox Content="Report incoming messages" IsChecked="True" Checked="ShowMessagesConsole_Checked" Unchecked="ShowMessagesConsole_Checked" Margin="40,0,12,0" Height="20" Canvas.ZIndex="-3" FontSize="12"/>
+                <TextBlock Text="MESSAGES CONSOLE" VerticalAlignment="Center" FontWeight="Bold" FontSize="18"/>
+                <Button Content="CLEAR" Click="{x:Bind ClearConsole_Click}" Margin="30,0,30,0" FontSize="12"/>
+                <CheckBox Content="Stop logging messages" IsChecked="False" Checked="StopMessagesConsole_Checked" Unchecked="StopMessagesConsole_Checked" 
+                          Margin="0,0,12,0" Height="20" Canvas.ZIndex="-3" FontSize="12"/>
             </StackPanel>
-            <ScrollViewer x:Name="scrollviewer" Grid.Row="1" Background="#FF16184D" FontSize="13" FontStretch="Condensed" Height="400" VerticalScrollMode="Enabled">
+            <ScrollViewer x:Name="scrollviewer" Grid.Row="1" Background="#FF000344" FontSize="13" FontStretch="Condensed" Height="400" VerticalScrollMode="Enabled">
                 <TextBlock x:Name="consolePanel" Text="" TextWrapping="Wrap" IsTextSelectionEnabled="True"/>
             </ScrollViewer>
         </StackPanel>

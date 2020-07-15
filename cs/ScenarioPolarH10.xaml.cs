@@ -21,6 +21,8 @@ using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
 
+using ExciteOMeter;
+
 namespace SDKTemplate
 {
     // This scenario connects to the device selected in the "Discover
@@ -34,6 +36,8 @@ namespace SDKTemplate
         private MainPage rootPage = MainPage.Current;
 
         private BluetoothLEDevice bluetoothLeDevice = null;
+
+        private BLE_PolarH10 devicePolarH10 = new BLE_PolarH10();
 
         private GattDeviceService BatteryService;
         private GattDeviceService PmdService;
@@ -249,9 +253,8 @@ namespace SDKTemplate
                 if (configPmdCP != null)
                 {
                     // Data from the PMD Control Point has been received
-                    BLE_PolarH10.PmdControlPointResponse response = new BLE_PolarH10.PmdControlPointResponse(configPmdCP);
-                    
-                    AppendConsoleText($"{response}");
+                    BLE_PolarH10.pmdCpResponse.UpdateData(configPmdCP);
+                    AppendConsoleText($"{BLE_PolarH10.pmdCpResponse}");
                 }
             }
             
@@ -435,38 +438,30 @@ namespace SDKTemplate
             {
                 Debug.WriteLine("Battery value was read: " + BitConverter.ToString(response));
 
-                BLE_PolarH10.BatteryData batteryResponse = new BLE_PolarH10.BatteryData(response);
+                BLE_PolarH10.batteryData.UpdateData(response);
 
-                AppendConsoleText(batteryResponse.ToString());
+                AppendConsoleText(BLE_PolarH10.batteryData.ToString());
 
                 await Dispatcher.RunAsync(CoreDispatcherPriority.Normal,
-                () => textBatteryLevel.Text = batteryResponse.ToStringValue());
+                () => textBatteryLevel.Text = BLE_PolarH10.batteryData.ToStringValue());
             }
         }
 
         private async void SettingsECG_Click()
         {
             IBuffer bufferRequest = BLE_PolarH10.CreateStreamingRequest(BLE_PolarH10.PmdControlPointCommand.GET_MEASUREMENT_SETTINGS, BLE_PolarH10.MeasurementType.ECG);
-            if (await CharacteristicWriteIBuffer(PmdControlPointCharacteristic, bufferRequest))
+            if (await CharacteristicWriteIBuffer(PmdControlPointCharacteristic, bufferRequest) == false)
             {
-                AppendConsoleText("ECG settings requested...");
-            }
-            else
-            {
-                Debug.WriteLine("Error on ECG Settings Request");
+                AppendConsoleText("Error requesting ECG settings...");
             }
         }
 
         private async void SettingsACC_Click()
         {
             IBuffer bufferRequest = BLE_PolarH10.CreateStreamingRequest(BLE_PolarH10.PmdControlPointCommand.GET_MEASUREMENT_SETTINGS, BLE_PolarH10.MeasurementType.ACC);
-            if (await CharacteristicWriteIBuffer(PmdControlPointCharacteristic, bufferRequest))
+            if (await CharacteristicWriteIBuffer(PmdControlPointCharacteristic, bufferRequest) == false)
             {
-                AppendConsoleText("ACC settings requested...");
-            }
-            else
-            {
-                Debug.WriteLine("Error on ACC Settings Request");
+                AppendConsoleText("Error requesting ACC settings...");
             }
         }
 
@@ -532,7 +527,7 @@ namespace SDKTemplate
                     IBuffer bufferRequest = BLE_PolarH10.CreateStreamingRequest(BLE_PolarH10.PmdControlPointCommand.REQUEST_MEASUREMENT_START, BLE_PolarH10.MeasurementType.ECG);
                     if (await CharacteristicWriteIBuffer(PmdControlPointCharacteristic, bufferRequest))
                     {
-                        AppendConsoleText("ECG Stream has started");
+                        AppendConsoleText("ECG Request has been successful. Initializing... (this might take up to 20 seconds)");
                     }
                     else
                     {
@@ -583,7 +578,7 @@ namespace SDKTemplate
                     IBuffer bufferRequest = BLE_PolarH10.CreateStreamingRequest(BLE_PolarH10.PmdControlPointCommand.REQUEST_MEASUREMENT_START, BLE_PolarH10.MeasurementType.ACC);
                     if (await CharacteristicWriteIBuffer(PmdControlPointCharacteristic, bufferRequest))
                     {
-                        AppendConsoleText("ACC Stream has started");
+                        AppendConsoleText("ACC Request has been successful. Initializing... (this might take up to 20 seconds)");
                     }
                     else
                     {
@@ -606,16 +601,22 @@ namespace SDKTemplate
             }
         }
 
-        private void ShowMessagesConsole_Checked(object sender, RoutedEventArgs e)
+        private void StopMessagesConsole_Checked(object sender, RoutedEventArgs e)
         {
             CheckBox checkBox= sender as CheckBox;
             if (checkBox != null)
             {
                 if (checkBox.IsChecked == true)
-                    is_console_enabled = true;
-                else
+                    // Stop showing messages
                     is_console_enabled = false;
+                else
+                    is_console_enabled = true;
             }
+        }
+
+        private void ClearConsole_Click(object sender, RoutedEventArgs e)
+        {
+            AppendConsoleText("", true); // Clear console
         }
 
         private async Task<bool> ValueChanged_SetNotifications(GattCharacteristic selectedCharacteristic,
@@ -778,28 +779,31 @@ namespace SDKTemplate
             byte[] data;
             CryptographicBuffer.CopyToByteArray(args.CharacteristicValue, out data);
 
+            // Battery Service
             if (sender.Uuid.Equals(BLE_PolarH10.BATTERY_LEVEL_CHARACTERISTIC))
             {
-                BLE_PolarH10.BatteryData response = new BLE_PolarH10.BatteryData(data);
-                AppendConsoleText($"{response}");
+                BLE_PolarH10.batteryData.UpdateData(data);
+                AppendConsoleText($"{BLE_PolarH10.batteryData}");
             }
+            // Heart Rate Measurement Service (HR, EE, RRi)
             else if (sender.Uuid.Equals(BLE_PolarH10.HR_MEASUREMENT))
             {
-                BLE_PolarH10.HeartRateMeasurementData response = new BLE_PolarH10.HeartRateMeasurementData(data);
-                AppendConsoleText($"{response}");
+                BLE_PolarH10.hrmData.UpdateData(data);
+                AppendConsoleText($"{BLE_PolarH10.hrmData}");
             }
-            // Response from Stream PMD Control Point
+            // Response from Stream PMD Control Point to configure streaming
             else if (sender.Uuid.Equals(BLE_PolarH10.PMD_CP))
             {
                 // Response is from Settings Request or about to start streaming
-                BLE_PolarH10.PmdControlPointResponse response = new BLE_PolarH10.PmdControlPointResponse(data);
-                AppendConsoleText($"{response}");
+                BLE_PolarH10.pmdCpResponse.UpdateData(data);
+                AppendConsoleText($"{BLE_PolarH10.pmdCpResponse}");
             }
-            // Response from Stream PMD Data
+            // Response from Stream PMD Data to get streaming bytes
             else if (sender.Uuid.Equals(BLE_PolarH10.PMD_DATA))
             {
                 // Response is already a streaming value
-                AppendConsoleText($"Response PMD Data: {BitConverter.ToString(data)}");
+                BLE_PolarH10.pmdDataResponse.UpdateData(data);
+                AppendConsoleText($"{BLE_PolarH10.pmdDataResponse}");
             }
             else
             {
@@ -895,8 +899,11 @@ namespace SDKTemplate
             }
         }
 
-        private async void AppendConsoleText(string text)
+        private async void AppendConsoleText(string text, bool clear_console=false)
         {
+            if(clear_console)
+                await Dispatcher.RunAsync(CoreDispatcherPriority.Normal,
+                    () => consolePanel.Text = "\n");
             if (is_console_enabled)
             {
                 if (bufferCounter++ < MAX_BUFFER_CONSOLE)
