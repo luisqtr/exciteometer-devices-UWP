@@ -12,7 +12,7 @@ using System.Collections.Generic;
 using Windows.Storage.Streams;
 using Windows.UI.Xaml.Controls;
 
-namespace ExciteOMeter
+namespace ExciteOMeter.Devices
 {
     /// <summary>
     /// Processes all the data exchanged from the Polar H10 through

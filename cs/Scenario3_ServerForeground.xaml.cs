@@ -21,7 +21,7 @@ using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
 
-namespace SDKTemplate
+namespace ExciteOMeter
 {
     // This scenario declares support for a calculator service. 
     // Remote clients (including this sample on another machine) can supply:

@@ -20,7 +20,7 @@ using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
 
-namespace SDKTemplate
+namespace ExciteOMeter
 {
     // This scenario uses a DeviceWatcher to enumerate nearby Bluetooth Low Energy devices,
     // displays them in a ListView, and lets the user select a device and pair it.

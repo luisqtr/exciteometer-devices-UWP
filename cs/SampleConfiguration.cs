@@ -15,7 +15,7 @@ using Windows.ApplicationModel.Background;
 using Windows.Storage;
 using Windows.UI.Xaml.Controls;
 
-namespace SDKTemplate
+namespace ExciteOMeter
 {
     public partial class MainPage : Page
     {

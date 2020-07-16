@@ -21,9 +21,9 @@ using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
 
-using ExciteOMeter;
+using ExciteOMeter.Devices;
 
-namespace SDKTemplate
+namespace ExciteOMeter
 {
     // This scenario connects to the device selected in the "Discover
     // GATT Servers" scenario and communicates with it.

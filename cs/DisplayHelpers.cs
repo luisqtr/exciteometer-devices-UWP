@@ -6,7 +6,7 @@ using Windows.Devices.Enumeration;
 using Windows.Storage.Streams;
 using Windows.UI.Xaml.Media.Imaging;
 
-namespace SDKTemplate
+namespace ExciteOMeter
 {
     /// <summary>
     /// Helpers for formatting information for display.
