@@ -7,15 +7,15 @@
   IgnorableNamespaces="uap mp">
 
     <Identity
-      Name="Microsoft.SDKSamples.BluetoothLE.CS"
-      Publisher="CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US"
-      Version="0.1.1.0" />
+      Name="10247LuisQuintero.ExciteOMeter"
+      Publisher="CN=7703E1C0-E518-4548-A39C-C666C305041D"
+      Version="0.1.0.0" />
 
-    <mp:PhoneIdentity PhoneProductId="a2214a83-6d31-41dd-b75f-0b8e56be182d" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
+    <mp:PhoneIdentity PhoneProductId="830c045a-acdc-4db1-8e18-e458e31877d6" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
     <Properties>
-        <DisplayName>ExciteOMeter-Devices</DisplayName>
-        <PublisherDisplayName>ExciteOMeter</PublisherDisplayName>
+        <DisplayName>ExciteOMeter</DisplayName>
+        <PublisherDisplayName>Luis Quintero</PublisherDisplayName>
         <Logo>Assets\StoreLogo-sdk.png</Logo>
     </Properties>
 
@@ -32,7 +32,7 @@
           Executable="$targetnametoken$.exe"
           EntryPoint="BluetoothLE.App">
             <uap:VisualElements
-              DisplayName="ExciteOMeter-Devices"
+              DisplayName="ExciteOMeter-Data Bridge"
               Square150x150Logo="Assets\squareTile-sdk.png"
               Square44x44Logo="Assets\SmallTile-sdk.png"
               Description="ExciteOMeter allows the connection of Bluetooth LE devices to collect physiological signals. All data packages are sent to the local network using LabStreamingLayer (LSL), and received in Unity game engine for Extended Reality (XR) applications. COMPATIBLE DEVICE: 1) Polar H10 chest strap to collect HR, RR-interval, ECG (130Hz) and Accelerometer (200Hz)."

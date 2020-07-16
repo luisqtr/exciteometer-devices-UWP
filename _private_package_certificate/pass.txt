@@ -1,0 +1,2 @@
+Self-signed Certificate Password (for dev purposes):
+	pass = Excite-O-Meter_XR4ALL
