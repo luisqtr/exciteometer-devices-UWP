@@ -527,7 +527,7 @@ namespace SDKTemplate
                     IBuffer bufferRequest = BLE_PolarH10.CreateStreamingRequest(BLE_PolarH10.PmdControlPointCommand.REQUEST_MEASUREMENT_START, BLE_PolarH10.MeasurementType.ECG);
                     if (await CharacteristicWriteIBuffer(PmdControlPointCharacteristic, bufferRequest))
                     {
-                        AppendConsoleText("ECG Request has been successful. Initializing... (this might take up to 20 seconds)");
+                        AppendConsoleText("ECG Request has been successful. \n\tInitializing... (this might take up to 20 seconds)");
                     }
                     else
                     {
@@ -578,7 +578,7 @@ namespace SDKTemplate
                     IBuffer bufferRequest = BLE_PolarH10.CreateStreamingRequest(BLE_PolarH10.PmdControlPointCommand.REQUEST_MEASUREMENT_START, BLE_PolarH10.MeasurementType.ACC);
                     if (await CharacteristicWriteIBuffer(PmdControlPointCharacteristic, bufferRequest))
                     {
-                        AppendConsoleText("ACC Request has been successful. Initializing... (this might take up to 20 seconds)");
+                        AppendConsoleText("ACC Request has been successful. \n\tInitializing... (this might take up to 20 seconds)");
                     }
                     else
                     {
@@ -825,78 +825,30 @@ namespace SDKTemplate
 
             return BitConverter.ToString(data);
 
-            if (format != null)
-            {
-                if (format.FormatType == GattPresentationFormatTypes.UInt32 && data.Length >= 4)
-                {
-                    return BitConverter.ToInt32(data, 0).ToString();
-                }
-                else if (format.FormatType == GattPresentationFormatTypes.Utf8)
-                {
-                    try
-                    {
-                        return Encoding.UTF8.GetString(data);
-                    }
-                    catch (ArgumentException)
-                    {
-                        return "(error: Invalid UTF-8 string)";
-                    }
-                }
-                else
-                {
-                    // Add support for other format types as needed.
-                    return "Unsupported format: " + CryptographicBuffer.EncodeToHexString(buffer);
-                }
-            }
-            return "Unknown format";
-        }
-
-        /// <summary>
-        /// Process the raw data received from the device into application usable data,
-        /// according the the Bluetooth Heart Rate Profile.
-        /// https://www.bluetooth.com/specifications/gatt/viewer?attributeXmlFile=org.bluetooth.characteristic.heart_rate_measurement.xml&u=org.bluetooth.characteristic.heart_rate_measurement.xml
-        /// This function throws an exception if the data cannot be parsed.
-        /// </summary>
-        /// <param name="data">Raw data received from the heart rate monitor.</param>
-        /// <returns>The heart rate measurement value.</returns>
-        private static ushort ParseHeartRateValue(byte[] data)
-        {
-
-            /*To get the rr-interval you have to read the flags from the first byte you receive. You read the flags as binary from right to left.
-                bit 0 = 0: Heart Rate Value Format is set to UINT8.Units:BPM(1 byte).
-                bit 0 = 1: Heart Rate Value Format is set to UINT16.Units:BPM(2 bytes).
-
-                bit 1 and 2: Sensor Contact Status bits. These are not relevant for this.
-
-                bit 3 = 0: Energy Expended field is not present.
-                bit 3 = 1: Energy Expended field is present.Format = uint16.Units: kilo Joules.
-
-                bit 4 = 0: RR - Interval values are not present.
-                bit 4 = 1: One or more RR - Interval values are present.Format = uint16.unit 1 / 1024 sec.
-
-                bit 5, 6 and 7: reserved for future use.
-
-            If your first byte for example = 16 = 0x10 = 0b00010000 then byte 2 = is heart rate.
-                Byte 3 and 4 are the rr - interval.
-                Byte 5 and 6(if present) rr - interval.
-            */
-
-            System.Diagnostics.Debug.WriteLine("Parsing HR Value: " + BitConverter.ToString(data));
-
-            // Heart Rate profile defined flag values
-            const byte heartRateValueFormat = 0x01;
-
-            byte flags = data[0];
-            bool isHeartRateValueSizeLong = ((flags & heartRateValueFormat) != 0);
-
-            if (isHeartRateValueSizeLong)
-            {
-                return BitConverter.ToUInt16(data, 1);
-            }
-            else
-            {
-                return data[1];
-            }
+            //if (format != null)
+            //{
+            //    if (format.FormatType == GattPresentationFormatTypes.UInt32 && data.Length >= 4)
+            //    {
+            //        return BitConverter.ToInt32(data, 0).ToString();
+            //    }
+            //    else if (format.FormatType == GattPresentationFormatTypes.Utf8)
+            //    {
+            //        try
+            //        {
+            //            return Encoding.UTF8.GetString(data);
+            //        }
+            //        catch (ArgumentException)
+            //        {
+            //            return "(error: Invalid UTF-8 string)";
+            //        }
+            //    }
+            //    else
+            //    {
+            //        // Add support for other format types as needed.
+            //        return "Unsupported format: " + CryptographicBuffer.EncodeToHexString(buffer);
+            //    }
+            //}
+            //return "Unknown format";
         }
 
         private async void AppendConsoleText(string text, bool clear_console=false)

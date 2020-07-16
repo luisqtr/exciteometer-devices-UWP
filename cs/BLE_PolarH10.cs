@@ -408,15 +408,16 @@ namespace ExciteOMeter
                 measurementType = (MeasurementType)data[0];
                 timestamp = BitConverter.ToUInt64(data, 1); // Reads 8 bytes from array
                 frameType = (FrameType)data[9];
-                numSamples = (data.Length - 10) / 3; // Reduce the header, each sample is 3 bytes
 
                 switch (measurementType)
                 {
                     case MeasurementType.ECG:
                         ECG.UpdateData(data);
+                        numSamples = (data.Length - 10) / 3; // Reduce the header, each sample is 3 bytes
                         break;
                     case MeasurementType.ACC:
                         ACC.UpdateData(data);
+                        numSamples = ACC.numSamples;
                         break;
                     default:
                         break;
@@ -488,7 +489,9 @@ namespace ExciteOMeter
                                                         // bit5-8 | RESERVED
             public ushort HR = 0;                       // Heart Rate Value | Unit: beats per min
             public ushort EE = 0;                       // Energy Expended | Unit: Kilo Joules
-            public float  RR = 0;                       // RR-interval | Unit: ms
+            public List<float> RR = new List<float>();  // RR-interval | Unit: ms
+
+            public string resultString = "";
 
             public HeartRateMeasurementData()
             {
@@ -508,16 +511,18 @@ namespace ExciteOMeter
 
                 HR = 0;
                 EE = 0;
-                RR = 0;
+                RR.Clear();
+
+                resultString = "";
         }
 
-            public void UpdateData(byte[] value)
+            public void UpdateData(byte[] data)
             {
                 // Restart values before setting new values
                 SetDefaultValues();
 
-                size = value.Length;
-                flagsByte = value[0];
+                size = data.Length;
+                flagsByte = data[0];
 
                 formatUINT16            = (flagsByte & (0x01)) != 0;
                 sensorContact           = (byte)(flagsByte & (0x06));
@@ -529,27 +534,42 @@ namespace ExciteOMeter
 
                 if (formatUINT16) // UINT16
                 {
-                    HR = BitConverter.ToUInt16(value, offset); // Takes two bytes for UINT16
+                    HR = BitConverter.ToUInt16(data, offset); // Takes two bytes for UINT16
                     offset += 2; // Next value is two bytes away
                 }
                 else // UINT8
                 {
-                    HR = value[offset];
+                    HR = data[offset];
                     offset++;   // Next value is one byte away
                 }
 
                 if (hasEnergyExpenditure)
                 {
                     // If has EE, bytes 2 and 3 are EE
-                    EE = BitConverter.ToUInt16(value, offset);
+                    EE = BitConverter.ToUInt16(data, offset);
                     offset += 2;
+                    resultString += $"| EE={EE}kJ ";
                 }
 
                 if (hasRRinterval)
                 {
-                    // If has RR interval data
-                    ushort receivedRR = BitConverter.ToUInt16(value, offset);
-                    RR = (float)receivedRR * 1000 / 1024; // Convert from resolution 1/1024 seconds to ms
+                    resultString += $"| RR=";
+
+                    ushort receivedRR;
+                    float parsedRR;
+                    while (offset < data.Length)
+                    {
+                        // If has RR interval data
+                        receivedRR = BitConverter.ToUInt16(data, offset);
+                        offset += 2;
+
+                        // Convert from resolution 1/1024 seconds to ms
+                        parsedRR = (float)receivedRR * 1000 / 1024;
+
+                        RR.Add(parsedRR);
+
+                        resultString += $" {parsedRR:F3}ms,";
+                    }
                 }
             }
 
@@ -559,10 +579,7 @@ namespace ExciteOMeter
                 text += $"packetSize:{size} | HR_UINT16:{formatUINT16} | has_EE:{hasEnergyExpenditure} | has_RR:{hasRRinterval} \n";
 
                 text += $"\tHR={HR}bpm";
-                if (hasEnergyExpenditure)
-                    text += $"| EE={EE}kJ ";
-                if (hasRRinterval)
-                    text += $"| RR={RR:F3}ms";
+                text += resultString;
 
                 return text;
             }
@@ -609,10 +626,6 @@ namespace ExciteOMeter
 
                 int offset = 10; // Variable to keep track of where to read the byte array
 
-                // Print Debug text
-                string text = "Samples: ";
-                string textHEX = "Samples HEX: ";
-
                 while (offset < data.Length)
                 {
                     EcgSample sample = new EcgSample();
@@ -625,13 +638,12 @@ namespace ExciteOMeter
                     ecgSamples.Add(sample);
 
                     // Print results
-                    text += $"{sample.microVolts},";
-                    textHEX += $"{BitConverter.ToString(data, offset-3, 3).Replace("-", string.Empty)},";
+                    //text += $"{sample.microVolts},";
+                    //textHEX += $"{BitConverter.ToString(data, offset-3, 3).Replace("-", string.Empty)},";
                 }
 
                 /// SEND DATA THROUGH LSL
-                System.Diagnostics.Debug.WriteLine(text);
-                System.Diagnostics.Debug.WriteLine(textHEX);
+                //TODO!!
             }
         }
 
@@ -653,6 +665,7 @@ namespace ExciteOMeter
                     this.z = z;
                 }
             }
+            public int numSamples = 0;
             public List<AccSample> accSamples = new List<AccSample>();
 
             public AccData()
@@ -662,6 +675,7 @@ namespace ExciteOMeter
 
             private void SetDefaultValues()
             {
+                numSamples = 0;
                 accSamples.Clear();
             }
 
@@ -676,6 +690,7 @@ namespace ExciteOMeter
 
                 // Step: How many bytes to move to find other axis data.
                 int step = (int)type + 1; // If type=1(16-bit), next value is 2 bytes away.
+                numSamples = (data.Length - 10) / (step*3); // Reduce the header, each sample is 3 bytes
 
                 // Print Debug text
                 string text = "Samples: ";

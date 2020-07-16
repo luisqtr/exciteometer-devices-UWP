@@ -9,13 +9,13 @@
     <Identity
       Name="Microsoft.SDKSamples.BluetoothLE.CS"
       Publisher="CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US"
-      Version="1.0.0.0" />
+      Version="0.1.1.0" />
 
     <mp:PhoneIdentity PhoneProductId="a2214a83-6d31-41dd-b75f-0b8e56be182d" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
     <Properties>
-        <DisplayName>Bluetooth Low Energy C# Sample</DisplayName>
-        <PublisherDisplayName>Microsoft Corporation</PublisherDisplayName>
+        <DisplayName>ExciteOMeter-Devices</DisplayName>
+        <PublisherDisplayName>ExciteOMeter</PublisherDisplayName>
         <Logo>Assets\StoreLogo-sdk.png</Logo>
     </Properties>
 
@@ -32,17 +32,20 @@
           Executable="$targetnametoken$.exe"
           EntryPoint="BluetoothLE.App">
             <uap:VisualElements
-              DisplayName="Bluetooth Low Energy - Data Bridge"
+              DisplayName="ExciteOMeter-Devices"
               Square150x150Logo="Assets\squareTile-sdk.png"
               Square44x44Logo="Assets\SmallTile-sdk.png"
-              Description="Communication bridge between Bluetooth LE devices and LSL outputs"
+              Description="ExciteOMeter allows the connection of Bluetooth LE devices to collect physiological signals. All data packages are sent to the local network using LabStreamingLayer (LSL), and received in Unity game engine for Extended Reality (XR) applications. COMPATIBLE DEVICE: 1) Polar H10 chest strap to collect HR, RR-interval, ECG (130Hz) and Accelerometer (200Hz)."
               BackgroundColor="#00b2f0">
                 <uap:SplashScreen Image="Assets\Splash-sdk.png" />
-                <uap:DefaultTile>
+                <uap:DefaultTile Square71x71Logo="Assets\SmallTile.png" Wide310x150Logo="Assets\WideTile.png" Square310x310Logo="Assets\LargeTile.png">
                     <uap:ShowNameOnTiles>
                         <uap:ShowOn Tile="square150x150Logo" />
                     </uap:ShowNameOnTiles>
                 </uap:DefaultTile>
+                <uap:InitialRotationPreference>
+                    <uap:Rotation Preference="landscape"/>
+                    <uap:Rotation Preference="landscapeFlipped"/></uap:InitialRotationPreference>
             </uap:VisualElements>
         </Application>
     </Applications>
