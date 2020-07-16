@@ -9,7 +9,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("XR4ALL")]
-[assembly: AssemblyProduct("XR4ALL")]
+[assembly: AssemblyProduct("ExciteOMeter")]
 [assembly: AssemblyCopyright("Copyright © XR4ALL")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]

@@ -393,22 +393,15 @@ namespace ExciteOMeter
         {
             if (!String.IsNullOrEmpty(CharacteristicWriteValue.Text))
             {
-                if (true)
-                {
-                    IBuffer buffer = ToIBufferFromHexString(CharacteristicWriteValue.Text);
+                IBuffer buffer = ToIBufferFromHexString(CharacteristicWriteValue.Text);
 
-                    byte[] data;
-                    CryptographicBuffer.CopyToByteArray(buffer, out data);
-                    System.Diagnostics.Debug.WriteLine("Write HEX:" + BitConverter.ToString(data));
-                    System.Diagnostics.Debug.WriteLine("\t Buffer Length:" + buffer.Length.ToString());
+                byte[] data;
+                CryptographicBuffer.CopyToByteArray(buffer, out data);
+                System.Diagnostics.Debug.WriteLine("Write HEX:" + BitConverter.ToString(data));
+                System.Diagnostics.Debug.WriteLine("\t Buffer Length:" + buffer.Length.ToString());
 
 
-                    var writeSuccessful = await WriteBufferToSelectedCharacteristicAsync(buffer);
-                }
-                else
-                {
-                    rootPage.NotifyUser("Data to write has to be an int32", NotifyType.ErrorMessage);
-                }
+                var writeSuccessful = await WriteBufferToSelectedCharacteristicAsync(buffer);
             }
             else
             {
