@@ -172,22 +172,22 @@
     <Content Include="$(SharedContentDir)\cs\Default.rd.xml">
       <Link>Properties\Default.rd.xml</Link>
     </Content>
-    <Content Include="$(SharedContentDir)\media\microsoft-sdk.png">
+    <Content Include="D:\Ludwig\Empresas\GIT-repos\XR4ALL\ExciteOMeter-Devices_Windows\SharedContent\media\microsoft-sdk.png">
       <Link>Assets\microsoft-sdk.png</Link>
     </Content>
-    <Content Include="$(SharedContentDir)\media\smalltile-sdk.png">
+    <Content Include="D:\Ludwig\Empresas\GIT-repos\XR4ALL\ExciteOMeter-Devices_Windows\SharedContent\media\smalltile-sdk.png">
       <Link>Assets\smallTile-sdk.png</Link>
     </Content>
-    <Content Include="$(SharedContentDir)\media\splash-sdk.png">
+    <Content Include="D:\Ludwig\Empresas\GIT-repos\XR4ALL\ExciteOMeter-Devices_Windows\SharedContent\media\splash-sdk.png">
       <Link>Assets\splash-sdk.png</Link>
     </Content>
-    <Content Include="$(SharedContentDir)\media\squaretile-sdk.png">
+    <Content Include="D:\Ludwig\Empresas\GIT-repos\XR4ALL\ExciteOMeter-Devices_Windows\SharedContent\media\squaretile-sdk.png">
       <Link>Assets\squareTile-sdk.png</Link>
     </Content>
-    <Content Include="$(SharedContentDir)\media\storelogo-sdk.png">
+    <Content Include="D:\Ludwig\Empresas\GIT-repos\XR4ALL\ExciteOMeter-Devices_Windows\SharedContent\media\storelogo-sdk.png">
       <Link>Assets\storeLogo-sdk.png</Link>
     </Content>
-    <Content Include="$(SharedContentDir)\media\tile-sdk.png">
+    <Content Include="D:\Ludwig\Empresas\GIT-repos\XR4ALL\ExciteOMeter-Devices_Windows\SharedContent\media\tile-sdk.png">
       <Link>Assets\tile-sdk.png</Link>
     </Content>
     <Content Include="Assets\LargeTile.scale-100.png" />
@@ -240,9 +240,6 @@
     <Content Include="Assets\WideTile.scale-150.png" />
     <Content Include="Assets\WideTile.scale-200.png" />
     <Content Include="Assets\WideTile.scale-400.png" />
-    <Content Include="D:\Ludwig\Empresas\GIT-repos\XR4ALL\3rd_party\Bluetooth_Low_Energy_sample\SharedContent\media\windows-sdk.png">
-      <Link>Assets\windows-sdk.png</Link>
-    </Content>
     <Content Include="Media\exciteometer_logo.png" />
     <None Include="Package.StoreAssociation.xml" />
   </ItemGroup>
