@@ -115,6 +115,7 @@
     <Compile Include="BLE_PolarH10.cs" />
     <Compile Include="Constants.cs" />
     <Compile Include="DisplayHelpers.cs" />
+    <Compile Include="liblsl\LSL.cs" />
     <Compile Include="PresentationFormats.cs" />
     <Compile Include="SampleConfiguration.cs" />
     <Compile Include="Scenario1_Discovery.xaml.cs">
@@ -240,7 +241,19 @@
     <Content Include="Assets\WideTile.scale-150.png" />
     <Content Include="Assets\WideTile.scale-200.png" />
     <Content Include="Assets\WideTile.scale-400.png" />
+    <Content Include="liblsl\bin\x64\Debug\netstandard2.0\lsl_csharp.dll" />
+    <Content Include="liblsl\bin\x64\Debug\netstandard2.0\lsl_csharp.pdb" />
+    <Content Include="liblsl\bin\x64\Release\netstandard2.0\lsl_csharp.dll" />
+    <Content Include="liblsl\bin\x64\Release\netstandard2.0\lsl_csharp.pdb" />
+    <Content Include="liblsl\bin\x86\Debug\netstandard2.0\lsl_csharp.dll" />
+    <Content Include="liblsl\bin\x86\Debug\netstandard2.0\lsl_csharp.pdb" />
+    <Content Include="liblsl\bin\x86\Release\netstandard2.0\lsl_csharp.dll" />
+    <Content Include="liblsl\bin\x86\Release\netstandard2.0\lsl_csharp.pdb" />
     <Content Include="Media\exciteometer_logo.png" />
+    <None Include="liblsl\bin\x64\Debug\netstandard2.0\lsl_csharp.deps.json" />
+    <None Include="liblsl\bin\x64\Release\netstandard2.0\lsl_csharp.deps.json" />
+    <None Include="liblsl\bin\x86\Debug\netstandard2.0\lsl_csharp.deps.json" />
+    <None Include="liblsl\bin\x86\Release\netstandard2.0\lsl_csharp.deps.json" />
     <None Include="Package.StoreAssociation.xml" />
   </ItemGroup>
   <ItemGroup>
@@ -256,9 +269,41 @@
   </PropertyGroup>
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\WindowsXaml\v$(VisualStudioVersion)\Microsoft.Windows.UI.Xaml.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
+       Other similar extension points exist, see Microsoft.Common.targets. -->
   <Target Name="BeforeBuild">
+    <!-- Add LSL libraries conditionally depending on the Platform -->
+    <ItemGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|ARM' ">
+      <Content Include="liblsl\bin\x86\Debug\netstandard2.0\lsl_csharp.dll">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
+    </ItemGroup>
+    <ItemGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|ARM' ">
+      <Content Include="liblsl\bin\x86\Release\netstandard2.0\lsl_csharp.dll">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
+    </ItemGroup>
+    <ItemGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x64' ">
+      <Content Include="liblsl\bin\x64\Debug\netstandard2.0\lsl_csharp.dll">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
+    </ItemGroup>
+    <ItemGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x64' ">
+      <Content Include="liblsl\bin\x64\Release\netstandard2.0\lsl_csharp.dll">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
+    </ItemGroup>
+    <ItemGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
+      <Content Include="liblsl\bin\x86\Debug\netstandard2.0\lsl_csharp.dll">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
+    </ItemGroup>
+    <ItemGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
+      <Content Include="liblsl\bin\x86\Release\netstandard2.0\lsl_csharp.dll">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
+    </ItemGroup>
   </Target>
+  <!-- 
   <Target Name="AfterBuild">
   </Target>
   -->
