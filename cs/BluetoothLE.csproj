@@ -237,7 +237,6 @@
     <Content Include="Assets\WideTile.scale-200.png" />
     <Content Include="Assets\WideTile.scale-400.png" />
     <Content Include="LSL\dll\liblsl32.dll" />
-    <Content Include="LSL\dll\liblsl64.dll" />
     <Content Include="Media\exciteometer_logo.png" />
     <None Include="Package.StoreAssociation.xml" />
   </ItemGroup>

@@ -10,6 +10,16 @@ The project is associated to the project in the Microsoft Partner Center, and th
 
 *Developed in Visual Studio 2019 Community Edition*
 
+## LibLSL
+
+Since the LSL library uses API that are not compatible with UWP it needed to be recompiled using this [reference](https://docs.microsoft.com/en-us/cpp/porting/how-to-use-existing-cpp-code-in-a-universal-windows-platform-app?view=vs-2019).
+
+After generating the project in CMake for VS2019, it is necessary to:
+- Add to the compiler options in `Properties>C/C++>Command Line` the following options to check compatibility with UWP: `/ZW:platform.winmd /EHsc`
+- Add the linker options in `Properties>Linker>Command Line`: `/SAFESEH /DYNAMICBASE /NXCOMPAT /APPCONTAINER`
+
+Adding the flag `/ZW` as suggested by the tutorial was not necessary, the workaround was found [here](https://docs.microsoft.com/en-us/cpp/build/reference/zw-windows-runtime-compilation?view=vs-2019)
+
 ## Related topics
 
 ### Conceptual
