@@ -6,6 +6,7 @@
 //
 //*********************************************************
 
+using LSL;
 using System;
 using System.Collections.Generic;
 using Windows.Storage.Streams;
@@ -175,6 +176,31 @@ namespace ExciteOMeter.Devices
             lslPolarH10 = new LSL_PolarH10(deviceName);
         }
 
+        /// <summary>
+        /// Close the streaming socket when it is not active
+        /// </summary>
+        /// <param name="type"></param>
+        public static void CloseStream(LSL_PolarH10.MEASUREMENT_STREAM type)
+        {
+            switch (type)
+            {
+                case LSL_PolarH10.MEASUREMENT_STREAM.HR:
+                case LSL_PolarH10.MEASUREMENT_STREAM.RRi:
+                    hrmData.isStreamConfigured = false;
+                    break;
+                case LSL_PolarH10.MEASUREMENT_STREAM.ECG:
+                    PmdDataResponse.ECG.isStreamConfigured = false;
+                    break;
+                case LSL_PolarH10.MEASUREMENT_STREAM.ACC:
+                    PmdDataResponse.ACC.isStreamConfigured = false;
+                    break;
+                default:
+                    break;
+            }
+
+            // Dispose the connection from the LSL class
+            LSL_PolarH10.CloseStreamOutlet(type);
+        }
 
         /*
          * 
@@ -501,10 +527,16 @@ namespace ExciteOMeter.Devices
             public bool hasEnergyExpenditure = false;   // bit3   | 1: Includes Values Energy Expenditure
             public bool hasRRinterval = false;          // bit4   | 1: Values RR interval are present
                                                         // bit5-8 | RESERVED
+
             public ushort HR = 0;                       // Heart Rate Value | Unit: beats per min
             public ushort EE = 0;                       // Energy Expended | Unit: Kilo Joules
             public List<float> RR = new List<float>();  // RR-interval | Unit: ms
 
+            ushort receivedRR;
+            float parsedRR;
+
+            // LSL setup
+            public bool isStreamConfigured = false;
             public short[] HR_lsl = new short[1];
             public float[] RR_lsl = new float[1];
 
@@ -546,12 +578,17 @@ namespace ExciteOMeter.Devices
                 hasEnergyExpenditure    = (flagsByte & (0x08)) != 0;
                 hasRRinterval           = (flagsByte & (0x10)) != 0;
 
-                ushort receivedRR;
-                float parsedRR;
+                if (!isStreamConfigured)
+                {
+                    LSL_PolarH10.OpenStreamOutlet(LSL_PolarH10.MEASUREMENT_STREAM.HR);
+                    LSL_PolarH10.OpenStreamOutlet(LSL_PolarH10.MEASUREMENT_STREAM.RRi);
+                    isStreamConfigured = true;
+                    System.Diagnostics.Debug.WriteLine($"HR and RRi Stream LSL configured.");
+                }
 
                 // Move pointer to read values from specific bytes
                 int offset = 1;
-
+                
                 if (formatUINT16) // UINT16
                 {
                     HR = BitConverter.ToUInt16(data, offset); // Takes two bytes for UINT16
@@ -567,7 +604,7 @@ namespace ExciteOMeter.Devices
                 HR_lsl[0] = (short)HR;
                 try
                 {
-                    lslPolarH10.streamHR.push_sample(HR_lsl);
+                    LSL_PolarH10.streamHR.push_sample(HR_lsl);
                 }
                 catch (Exception e)
                 {
@@ -609,7 +646,7 @@ namespace ExciteOMeter.Devices
                         RR_lsl[0] = parsedRR;
                         try
                         {
-                            lslPolarH10.streamRRi.push_sample(RR_lsl);
+                            LSL_PolarH10.streamRRi.push_sample(RR_lsl);
                         }
                         catch (Exception e)
                         {
@@ -690,7 +727,7 @@ namespace ExciteOMeter.Devices
 
                 if(!isStreamConfigured)
                 {
-                    lslPolarH10.SetupStreamOutlet(LSL_PolarH10.MEASUREMENT_STREAM.ECG, numSamples);
+                    LSL_PolarH10.OpenStreamOutlet(LSL_PolarH10.MEASUREMENT_STREAM.ECG, numSamples);
                     chunkSizeConfigured = numSamples;
                     isStreamConfigured = true;
                     ECG_lsl = new int[1,chunkSizeConfigured];
@@ -722,7 +759,7 @@ namespace ExciteOMeter.Devices
                 if (isStreamConfigured)
                     try
                     {
-                        lslPolarH10.streamECG.push_chunk(ECG_lsl,timestamp);
+                        LSL_PolarH10.streamECG.push_chunk(ECG_lsl,timestamp);
                     }
                     catch (Exception e)
                     {
@@ -796,7 +833,7 @@ namespace ExciteOMeter.Devices
 
                 if (!isStreamConfigured)
                 {
-                    lslPolarH10.SetupStreamOutlet(LSL_PolarH10.MEASUREMENT_STREAM.ACC, numSamples);
+                    LSL_PolarH10.OpenStreamOutlet(LSL_PolarH10.MEASUREMENT_STREAM.ACC, numSamples);
                     chunkSizeConfigured = numSamples;
                     isStreamConfigured = true;
                     ACC_lsl = new int[NUM_AXES, chunkSizeConfigured];
@@ -854,23 +891,19 @@ namespace ExciteOMeter.Devices
                     ACC_lsl[2, counter] = z;
                     counter++;
 
-                    // Print results
-                    //text += $"{x}|{y}|{z},";
                 }
 
                 /// SEND DATA THROUGH LSL
                 if (isStreamConfigured)
                     try
                     {
-                        lslPolarH10.streamACC.push_chunk(ACC_lsl, timestamp);
+                        LSL_PolarH10.streamACC.push_chunk(ACC_lsl, timestamp);
                     }
                     catch (Exception e)
                     {
                         System.Diagnostics.Debug.WriteLine(e.Message);
                         throw;
                     }
-
-                //System.Diagnostics.Debug.WriteLine(text);
             }
         }
 

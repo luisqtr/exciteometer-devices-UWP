@@ -30,36 +30,36 @@
                 Selected device: <Run x:Name="SelectedDeviceRun" FontWeight="Bold"/>
         </TextBlock>
         <Button x:Name="ConnectButton" Content="Connect" Margin="0,10,0,0"/>
-        <StackPanel x:Name="PanelCharacteristics" Orientation="Horizontal" Visibility="Collapsed">
+        <StackPanel x:Name="PanelCharacteristics" Orientation="Horizontal" Visibility="Collapsed" Margin="0,20,0,0">
+            <StackPanel Orientation="Vertical" Margin="0,0,30,0">
+                <TextBlock Text="Battery Level" Style="{StaticResource SampleHeaderTextStyle}" Height="30" FontSize="15"/>
+                <TextBlock x:Name="textBatteryLevel" Text="100%" Style="{StaticResource SampleHeaderTextStyle}" Height="30" FontSize="15" FontWeight="Bold" VerticalAlignment="Center"/>
+                <Button Content="Refresh" Click="{x:Bind Path=ReadBattery_Click}" Margin="0,0,0,0" FontSize="12"/>
+            </StackPanel>
             <StackPanel Orientation="Vertical">
                 <ToggleSwitch x:Name="toggleHeartRate" Header="HR + RR interval" IsOn="False" Toggled="ToggleHeartRate_Toggled"/>
             </StackPanel>
-            <StackPanel Orientation="Vertical">
+            <StackPanel x:Name="panelECG" Orientation="Vertical" Visibility="Visible">
                 <ToggleSwitch x:Name="toggleECG" Header="ECG" IsOn="False" Toggled="ToggleECG_Toggled"/>
-                <Button Content="Settings" Click="{x:Bind SettingsECG_Click}" Margin="0,0,0,0" FontSize="12"/>
+                <Button Content="Settings" Click="{x:Bind Path=SettingsECG_Click}" Margin="0,0,0,0" FontSize="12"/>
             </StackPanel>
-            <StackPanel Orientation="Vertical">
+            <StackPanel x:Name="panelACC" Orientation="Vertical" Visibility="Visible">
                 <ToggleSwitch x:Name="toggleACC" Header="Accelerometer" IsOn="False" Toggled="ToggleACC_Toggled"/>
-                <Button Content="Settings" Click="{x:Bind SettingsACC_Click}" Margin="0,0,0,0" FontSize="12"/>
-            </StackPanel>
-            <StackPanel Orientation="Vertical">
-                <TextBlock Text="Battery Level" Style="{StaticResource SampleHeaderTextStyle}" Height="30" FontSize="15"/>
-                <TextBlock x:Name="textBatteryLevel" Text="100%" Style="{StaticResource SampleHeaderTextStyle}" Height="30" FontSize="15" FontWeight="Bold" VerticalAlignment="Center"/>
-                <Button Content="Refresh" Click="{x:Bind ReadBattery_Click}" Margin="0,0,0,0" FontSize="12"/>
+                <Button Content="Settings" Click="{x:Bind Path=SettingsACC_Click}" Margin="0,0,0,0" FontSize="12"/>
             </StackPanel>
         </StackPanel>
         <StackPanel Orientation="Vertical">
-            <StackPanel Orientation="Horizontal" Margin="0,25,0,0">
+            <StackPanel x:Name="ConsoleTitle" Orientation="Horizontal" Margin="0,25,0,0">
                 <TextBlock Text="MESSAGES CONSOLE" VerticalAlignment="Center" FontWeight="Bold" FontSize="18"/>
                 <Button Content="CLEAR" Click="{x:Bind ClearConsole_Click}" Margin="30,0,30,0" FontSize="12"/>
                 <CheckBox Content="Stop logging messages" IsChecked="False" Checked="StopMessagesConsole_Checked" Unchecked="StopMessagesConsole_Checked" 
                           Margin="0,0,12,0" Height="20" Canvas.ZIndex="-3" FontSize="12"/>
             </StackPanel>
-            <ScrollViewer x:Name="scrollviewer" Grid.Row="1" Background="#FF000344" FontSize="13" FontStretch="Condensed" Height="400" VerticalScrollMode="Enabled">
+            <ScrollViewer x:Name="scrollviewer" Grid.Row="1" Background="#FF000344" FontSize="13" Height="400" FontStretch="Condensed" VerticalScrollMode="Enabled">
                 <TextBlock x:Name="consolePanel" Text="" TextWrapping="Wrap" IsTextSelectionEnabled="True"/>
             </ScrollViewer>
         </StackPanel>
-        <TextBlock x:Name="CharacteristicLatestValue" Margin="0,10,0,0" Visibility="Visible"/>
+        <TextBlock x:Name="CharacteristicLatestValue" Margin="0,10,0,0" Visibility="Visible" FontSize="9" HorizontalAlignment="Left"/>
     </StackPanel>
     <!--</ScrollViewer>-->
 </Page>

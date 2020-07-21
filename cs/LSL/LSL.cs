@@ -834,8 +834,8 @@ public class liblsl
         public LostException() { }
         public LostException(string message) { }
         public LostException(string message, System.Exception inner) { }
-        //protected LostException(System.Runtime.Serialization.SerializationInfo info,
-        //    System.Runtime.Serialization.StreamingContext context) { }
+        protected LostException(System.Runtime.Serialization.EmitTypeInformation info,
+            System.Runtime.Serialization.StreamingContext context) { }
     }
 
     /**
@@ -846,8 +846,8 @@ public class liblsl
         public InternalException() { }
         public InternalException(string message) { }
         public InternalException(string message, System.Exception inner) { }
-        //protected InternalException(System.Runtime.Serialization.SerializationInfo info,
-        //    System.Runtime.Serialization.StreamingContext context) { }
+        protected InternalException(System.Runtime.Serialization.EmitTypeInformation info,
+            System.Runtime.Serialization.StreamingContext context) { }
     }
 
     /**

@@ -4,10 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-using LSL;
-using Windows.ApplicationModel.UserDataAccounts.SystemAccess;
-using Windows.Devices.Enumeration;
-using Windows.Media.Core;
+using LSL.SAFE;
 
 namespace ExciteOMeter.Devices
 {
@@ -27,19 +24,19 @@ namespace ExciteOMeter.Devices
             ACC,
         }
 
-        public string deviceId = "Polar H10 ";
+        public static string deviceId = "Polar H10 ";
 
         // Definition of Stream Information
-        public liblsl.StreamInfo streamInfoHR;
-        public liblsl.StreamInfo streamInfoRRi;
-        public liblsl.StreamInfo streamInfoECG;
-        public liblsl.StreamInfo streamInfoACC;
+        static liblsl.StreamInfo streamInfoHR;
+        static liblsl.StreamInfo streamInfoRRi;
+        static liblsl.StreamInfo streamInfoECG;
+        static liblsl.StreamInfo streamInfoACC;
 
         // Definition of Stream Outlets
-        public liblsl.StreamOutlet streamHR;
-        public liblsl.StreamOutlet streamRRi;
-        public liblsl.StreamOutlet streamECG;
-        public liblsl.StreamOutlet streamACC;
+        public static liblsl.StreamOutlet streamHR;
+        public static liblsl.StreamOutlet streamRRi;
+        public static liblsl.StreamOutlet streamECG;
+        public static liblsl.StreamOutlet streamACC;
 
 
         public LSL_PolarH10(string deviceIdentifier)
@@ -57,7 +54,7 @@ namespace ExciteOMeter.Devices
                                                 liblsl.IRREGULAR_RATE,             // Sampling Rate (Hz)
                                                 liblsl.channel_format_t.cf_int16,  // Format
                                                 deviceId);                         // Source ID (serial number) to identify source
-            streamHR = new liblsl.StreamOutlet(streamInfoHR);
+            
 
             // RR-interval
             streamInfoRRi = new liblsl.StreamInfo("RR interval",                   // Name
@@ -66,7 +63,6 @@ namespace ExciteOMeter.Devices
                                                 liblsl.IRREGULAR_RATE,             // Sampling Rate (Hz)
                                                 liblsl.channel_format_t.cf_float32,// Format
                                                 deviceId);                         // Source ID (serial number) to identify source
-            streamRRi = new liblsl.StreamOutlet(streamInfoRRi);
 
             // ECG
             streamInfoECG = new liblsl.StreamInfo("Raw ECG",
@@ -75,7 +71,6 @@ namespace ExciteOMeter.Devices
                                                 liblsl.IRREGULAR_RATE,
                                                 liblsl.channel_format_t.cf_int32,   // 3B ECG microVolts
                                                 deviceId);
-            // streamECG = new liblsl.StreamOutlet(streamInfoECG);  // This is setup with SetupStreamOutlet() after the first packet is received
 
             // ACC
             streamInfoACC = new liblsl.StreamInfo("Raw Accelerometer",
@@ -84,7 +79,6 @@ namespace ExciteOMeter.Devices
                                                 liblsl.IRREGULAR_RATE,
                                                 liblsl.channel_format_t.cf_int32,   // Each axis can be 24-bit
                                                 deviceId);
-            // streamACC = new liblsl.StreamOutlet(streamInfoACC); // This is setup with SetupStreamOutlet() after the first packet is received
         }
 
         /// <summary>
@@ -93,15 +87,15 @@ namespace ExciteOMeter.Devices
         /// </summary>
         /// <param name="type">Type of stream</param>
         /// <param name="chunk_size">New chunk size to use in the outlet </param>
-        public void SetupStreamOutlet(MEASUREMENT_STREAM type, int new_chunk_size)
+        public static void OpenStreamOutlet(MEASUREMENT_STREAM type, int new_chunk_size = 1)
         {
             switch (type)
             {
                 case MEASUREMENT_STREAM.HR:
-                    // This is setup from constructor
+                    streamHR = new liblsl.StreamOutlet(streamInfoHR); // Constant chunk_size = 1
                     break;
                 case MEASUREMENT_STREAM.RRi:
-                    // This is setup from constructor
+                    streamRRi = new liblsl.StreamOutlet(streamInfoRRi); // Constant chunk_size = 1
                     break;
                 case MEASUREMENT_STREAM.ECG:
                     // This can be setup in runtime depending on how many samples are received from the sensor
@@ -110,6 +104,32 @@ namespace ExciteOMeter.Devices
                 case MEASUREMENT_STREAM.ACC:
                     // This can be setup in runtime depending on how many samples are received from the sensor
                     streamACC = new liblsl.StreamOutlet(streamInfoACC, chunk_size: new_chunk_size);
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Close the outlet
+        /// </summary>
+        /// <param name="type"></param>
+
+        public static void CloseStreamOutlet(MEASUREMENT_STREAM type)
+        {
+            switch (type)
+            {
+                case MEASUREMENT_STREAM.HR:
+                    if (streamHR != null) streamHR.Dispose();
+                    break;
+                case MEASUREMENT_STREAM.RRi:
+                    if (streamRRi != null) streamRRi.Dispose();
+                    break;
+                case MEASUREMENT_STREAM.ECG:
+                    if (streamECG != null) streamECG.Dispose();
+                    break;
+                case MEASUREMENT_STREAM.ACC:
+                    if (streamACC != null) streamACC.Dispose();
                     break;
                 default:
                     break;

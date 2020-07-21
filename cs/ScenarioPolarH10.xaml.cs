@@ -265,7 +265,7 @@ namespace ExciteOMeter
 
             // Show panel buttons
             PanelCharacteristics.Visibility = Visibility.Visible;
-            AppendConsoleText($"DONE! Please use the controls in the panel to enable data transmission...");
+            AppendConsoleText($"CONFIGURATION FINISHED! \n\tPlease use the controls in the panel to enable data transmission...");
         }
 
         private async Task<bool> ConnectAndFetchServices()
@@ -482,6 +482,8 @@ namespace ExciteOMeter
                     {
                         if (await ValueChanged_SetNotifications(HeartRateMeasurementCharacteristic) == true)
                         {
+                            // LSL is opened from the internal class when the first value is received
+
                             // Set callback
                             HeartRateMeasurementCharacteristic.ValueChanged += Characteristic_ValueChanged;
                             subscribedForNotification_Hrm = true;
@@ -493,8 +495,13 @@ namespace ExciteOMeter
                 {
                     if (subscribedForNotification_Hrm)
                     {
+                        // Unsubscribe from notifications
                         if (await ValueChanged_UnsetNotifications(HeartRateMeasurementCharacteristic) == true)
                         {
+                            // Close Stream Outlets from LSL
+                            BLE_PolarH10.CloseStream(LSL_PolarH10.MEASUREMENT_STREAM.HR);
+                            BLE_PolarH10.CloseStream(LSL_PolarH10.MEASUREMENT_STREAM.RRi);
+
                             // Unset Callback
                             subscribedForNotification_Hrm = false;
                             HeartRateMeasurementCharacteristic.ValueChanged -= Characteristic_ValueChanged;
@@ -517,6 +524,8 @@ namespace ExciteOMeter
                     {
                         if (await ValueChanged_SetNotifications(PmdDataCharacteristic) == true)
                         {
+                            // LSL Stream Outlet is configured internally when the first packet is received
+
                             // Set callback
                             PmdDataCharacteristic.ValueChanged += Characteristic_ValueChanged;
                             subscribedForNotifications_PmdData = true;
@@ -534,6 +543,7 @@ namespace ExciteOMeter
                     if (await CharacteristicWriteIBuffer(PmdControlPointCharacteristic, bufferRequest))
                     {
                         AppendConsoleText("ECG Request has been successful. \n\tInitializing... (this might take up to 20 seconds)");
+                        panelACC.Visibility = Visibility.Collapsed;
                     }
                     else
                     {
@@ -546,7 +556,11 @@ namespace ExciteOMeter
                     IBuffer bufferRequest = BLE_PolarH10.CreateStreamingRequest(BLE_PolarH10.PmdControlPointCommand.STOP_MEASUREMENT, BLE_PolarH10.MeasurementType.ECG);
                     if (await CharacteristicWriteIBuffer(PmdControlPointCharacteristic, bufferRequest))
                     {
+                        // Close LSL Stream Outlet
+                        BLE_PolarH10.CloseStream(LSL_PolarH10.MEASUREMENT_STREAM.ECG);
                         AppendConsoleText("ECG Stream has been stopped");
+
+                        panelACC.Visibility = Visibility.Visible;
                     }
                     else
                     {
@@ -568,6 +582,8 @@ namespace ExciteOMeter
                     {
                         if (await ValueChanged_SetNotifications(PmdDataCharacteristic) == true)
                         {
+                            // LSL Stream Outlet is configured internally when the first packet is received
+
                             // Set callback
                             PmdDataCharacteristic.ValueChanged += Characteristic_ValueChanged;
                             subscribedForNotifications_PmdData = true;
@@ -585,6 +601,7 @@ namespace ExciteOMeter
                     if (await CharacteristicWriteIBuffer(PmdControlPointCharacteristic, bufferRequest))
                     {
                         AppendConsoleText("ACC Request has been successful. \n\tInitializing... (this might take up to 20 seconds)");
+                        panelECG.Visibility = Visibility.Collapsed;
                     }
                     else
                     {
@@ -597,7 +614,10 @@ namespace ExciteOMeter
                     IBuffer bufferRequest = BLE_PolarH10.CreateStreamingRequest(BLE_PolarH10.PmdControlPointCommand.STOP_MEASUREMENT, BLE_PolarH10.MeasurementType.ACC);
                     if (await CharacteristicWriteIBuffer(PmdControlPointCharacteristic, bufferRequest))
                     {
+                        // Close LSL Stream Outlet
+                        BLE_PolarH10.CloseStream(LSL_PolarH10.MEASUREMENT_STREAM.ACC);
                         AppendConsoleText("ACC Stream has been stopped");
+                        panelECG.Visibility = Visibility.Visible;
                     }
                     else
                     {

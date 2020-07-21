@@ -117,6 +117,7 @@
     <Compile Include="Devices\PolarH10\LSL_PolarH10.cs" />
     <Compile Include="DisplayHelpers.cs" />
     <Compile Include="LSL\LSL.cs" />
+    <Compile Include="LSL\LSL_safe.cs" />
     <Compile Include="PresentationFormats.cs" />
     <Compile Include="SampleConfiguration.cs" />
     <Compile Include="Scenario1_Discovery.xaml.cs">
