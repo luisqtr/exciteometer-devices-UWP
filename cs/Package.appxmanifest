@@ -51,7 +51,8 @@
     </Applications>
 
     <Capabilities>
-        <Capability Name="internetClient" />
+        <Capability Name="privateNetworkClientServer"/>
+        <Capability Name="internetClientServer"/>
         <!--BT_Code: Always declare the bluetooth capability when using Bluetooth-->
         <DeviceCapability Name="bluetooth" />
     </Capabilities>

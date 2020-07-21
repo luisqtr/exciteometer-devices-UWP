@@ -11,6 +11,7 @@ using System.IO;
 using System.Collections.Generic;
 using Windows.Storage.Streams;
 using Windows.UI.Xaml.Controls;
+using Windows.Devices.Bluetooth.Advertisement;
 
 namespace ExciteOMeter.Devices
 {
@@ -21,6 +22,8 @@ namespace ExciteOMeter.Devices
     /// </summary>
     class BLE_PolarH10
     {
+        public static string deviceName = "Polar H10";  // Modified with the serial number of the device to connect
+
         // Battery
         public static readonly Guid BATTERY_SERVICE              = new Guid("0000180f-0000-1000-8000-00805f9b34fb");
         public static readonly Guid BATTERY_LEVEL_CHARACTERISTIC = new Guid("00002a19-0000-1000-8000-00805f9b34fb");
@@ -42,6 +45,10 @@ namespace ExciteOMeter.Devices
         public static PmdDataResponse pmdDataResponse = new PmdDataResponse();
 
         public static string docPath = Windows.Storage.ApplicationData.Current.LocalFolder.Path;
+
+        // LabStreamingLayer
+        private static LSL_PolarH10 lslPolarH10;
+
 
         /// <summary>
         /// Type of actions to execute in the PMD Control Point
@@ -159,6 +166,17 @@ namespace ExciteOMeter.Devices
             DataWriter writer = new DataWriter();
             writer.WriteBytes(parameters);
             return writer.DetachBuffer();
+        }
+
+        /// <summary>
+        /// Configure all the streams for LabStreamingLayer
+        /// communication
+        /// </summary>
+        /// <param name="deviceName">Serial number of device</param>
+        /// <returns></returns>
+        public static void SetupLSL()
+        {
+            lslPolarH10 = new LSL_PolarH10(deviceName);
         }
 
 
@@ -483,13 +501,16 @@ namespace ExciteOMeter.Devices
 
             // FLAGS BYTE
             public bool formatUINT16 = false;           // bit0   | 0:UINT8, 1:UINT16
-            public byte sensorContact = 0;                  // bit1-2 | NOT USED >> Sensor contact feature
+            public byte sensorContact = 0;              // bit1-2 | NOT USED >> Sensor contact feature
             public bool hasEnergyExpenditure = false;   // bit3   | 1: Includes Values Energy Expenditure
             public bool hasRRinterval = false;          // bit4   | 1: Values RR interval are present
                                                         // bit5-8 | RESERVED
             public ushort HR = 0;                       // Heart Rate Value | Unit: beats per min
             public ushort EE = 0;                       // Energy Expended | Unit: Kilo Joules
             public List<float> RR = new List<float>();  // RR-interval | Unit: ms
+
+            public short[] HR_lsl = new short[1];
+            public float[] RR_lsl = new float[1];
 
             public string resultString = "";
 
@@ -543,6 +564,11 @@ namespace ExciteOMeter.Devices
                     offset++;   // Next value is one byte away
                 }
 
+                // Send through LSL
+                HR_lsl[0] = (short)HR;
+                lslPolarH10.streamHR.push_sample(HR_lsl);
+
+
                 if (hasEnergyExpenditure)
                 {
                     // If has EE, bytes 2 and 3 are EE
@@ -555,8 +581,11 @@ namespace ExciteOMeter.Devices
                 {
                     resultString += $"| RR=";
 
+                    // How many RR intervals are sent, used to prellocate array
+                    int numRRSamples = (data.Length - offset - 1) / 2;
                     ushort receivedRR;
                     float parsedRR;
+
                     while (offset < data.Length)
                     {
                         // If has RR interval data
@@ -569,6 +598,10 @@ namespace ExciteOMeter.Devices
                         RR.Add(parsedRR);
 
                         resultString += $" {parsedRR:F3}ms,";
+
+                        // Send through LSL
+                        RR_lsl[0] = parsedRR;
+                        lslPolarH10.streamRRi.push_sample(RR_lsl);
                     }
                 }
             }

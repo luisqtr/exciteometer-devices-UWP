@@ -834,10 +834,8 @@ public class liblsl
         public LostException() { }
         public LostException(string message) { }
         public LostException(string message, System.Exception inner) { }
-
-        // Does not exist in UWP10
         //protected LostException(System.Runtime.Serialization.SerializationInfo info,
-        //System.Runtime.Serialization.StreamingContext context) { }
+        //    System.Runtime.Serialization.StreamingContext context) { }
     }
 
     /**
@@ -848,8 +846,6 @@ public class liblsl
         public InternalException() { }
         public InternalException(string message) { }
         public InternalException(string message, System.Exception inner) { }
-
-        // Does not exist in UWP10
         //protected InternalException(System.Runtime.Serialization.SerializationInfo info,
         //    System.Runtime.Serialization.StreamingContext context) { }
     }
@@ -895,6 +891,9 @@ public class liblsl
             const string libname =  "liblsl";
 #elif UNITY_ANDROID
             const string libname = "lslAndroid";
+#elif TARGET_WIN_X64
+            // CUSTOM "Conditional Compilation Symbol" defined when building for x64 platforms in the Visual Studio Project
+            const string libname = "liblsl64.dll";
 #else
             // Name of the binary to include -- replace this if on non-Windows and non-Unity (e.g., liblsl64.so)
             const string libname = "liblsl32.dll";

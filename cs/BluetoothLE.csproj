@@ -57,7 +57,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
     <DebugSymbols>true</DebugSymbols>
     <OutputPath>bin\x64\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE;NETFX_CORE;WINDOWS_UWP</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;NETFX_CORE;WINDOWS_UWP;CODE_ANALYSIS;TARGET_WIN_X64</DefineConstants>
     <NoWarn>;2008</NoWarn>
     <DebugType>full</DebugType>
     <PlatformTarget>x64</PlatformTarget>
@@ -112,10 +112,11 @@
     <Compile Include="$(SharedContentDir)\cs\AssemblyInfo.cs">
       <Link>Properties\AssemblyInfo.cs</Link>
     </Compile>
-    <Compile Include="BLE_PolarH10.cs" />
+    <Compile Include="Devices\BLE_PolarH10.cs" />
     <Compile Include="Constants.cs" />
+    <Compile Include="Devices\LSL_PolarH10.cs" />
     <Compile Include="DisplayHelpers.cs" />
-    <Compile Include="liblsl\LSL.cs" />
+    <Compile Include="LSL.cs" />
     <Compile Include="PresentationFormats.cs" />
     <Compile Include="SampleConfiguration.cs" />
     <Compile Include="Scenario1_Discovery.xaml.cs">
@@ -241,19 +242,9 @@
     <Content Include="Assets\WideTile.scale-150.png" />
     <Content Include="Assets\WideTile.scale-200.png" />
     <Content Include="Assets\WideTile.scale-400.png" />
-    <Content Include="liblsl\bin\x64\Debug\netstandard2.0\lsl_csharp.dll" />
-    <Content Include="liblsl\bin\x64\Debug\netstandard2.0\lsl_csharp.pdb" />
-    <Content Include="liblsl\bin\x64\Release\netstandard2.0\lsl_csharp.dll" />
-    <Content Include="liblsl\bin\x64\Release\netstandard2.0\lsl_csharp.pdb" />
-    <Content Include="liblsl\bin\x86\Debug\netstandard2.0\lsl_csharp.dll" />
-    <Content Include="liblsl\bin\x86\Debug\netstandard2.0\lsl_csharp.pdb" />
-    <Content Include="liblsl\bin\x86\Release\netstandard2.0\lsl_csharp.dll" />
-    <Content Include="liblsl\bin\x86\Release\netstandard2.0\lsl_csharp.pdb" />
+    <Content Include="liblsl32.dll" />
+    <Content Include="liblsl64.dll" />
     <Content Include="Media\exciteometer_logo.png" />
-    <None Include="liblsl\bin\x64\Debug\netstandard2.0\lsl_csharp.deps.json" />
-    <None Include="liblsl\bin\x64\Release\netstandard2.0\lsl_csharp.deps.json" />
-    <None Include="liblsl\bin\x86\Debug\netstandard2.0\lsl_csharp.deps.json" />
-    <None Include="liblsl\bin\x86\Release\netstandard2.0\lsl_csharp.deps.json" />
     <None Include="Package.StoreAssociation.xml" />
   </ItemGroup>
   <ItemGroup>
@@ -273,32 +264,32 @@
   <Target Name="BeforeBuild">
     <!-- Add LSL libraries conditionally depending on the Platform -->
     <ItemGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|ARM' ">
-      <Content Include="liblsl\bin\x86\Debug\netstandard2.0\lsl_csharp.dll">
+      <Content Include="liblsl32.dll">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </Content>
     </ItemGroup>
     <ItemGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|ARM' ">
-      <Content Include="liblsl\bin\x86\Release\netstandard2.0\lsl_csharp.dll">
+      <Content Include="liblsl32.dll">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </Content>
     </ItemGroup>
     <ItemGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x64' ">
-      <Content Include="liblsl\bin\x64\Debug\netstandard2.0\lsl_csharp.dll">
+      <Content Include="liblsl64.dll">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </Content>
     </ItemGroup>
     <ItemGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x64' ">
-      <Content Include="liblsl\bin\x64\Release\netstandard2.0\lsl_csharp.dll">
+      <Content Include="liblsl64.dll">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </Content>
     </ItemGroup>
     <ItemGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
-      <Content Include="liblsl\bin\x86\Debug\netstandard2.0\lsl_csharp.dll">
+      <Content Include="liblsl32.dll">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </Content>
     </ItemGroup>
     <ItemGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
-      <Content Include="liblsl\bin\x86\Release\netstandard2.0\lsl_csharp.dll">
+      <Content Include="liblsl32.dll">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </Content>
     </ItemGroup>

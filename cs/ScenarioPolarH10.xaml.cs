@@ -257,9 +257,15 @@ namespace ExciteOMeter
                     AppendConsoleText($"{BLE_PolarH10.pmdCpResponse}");
                 }
             }
-            
-            // TODO: Show buttons
+
+            // Setup LabStreamingLayer
+            AppendConsoleText($"Configuring streamings for LabStreamingLayer (LSL)...");
+            BLE_PolarH10.deviceName = rootPage.SelectedBleDeviceId;
+            BLE_PolarH10.SetupLSL();
+
+            // Show panel buttons
             PanelCharacteristics.Visibility = Visibility.Visible;
+            AppendConsoleText($"DONE! Please use the controls in the panel to enable data transmission...");
         }
 
         private async Task<bool> ConnectAndFetchServices()
