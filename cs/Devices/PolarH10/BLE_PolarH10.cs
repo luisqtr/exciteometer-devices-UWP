@@ -7,11 +7,8 @@
 //*********************************************************
 
 using System;
-using System.IO;
 using System.Collections.Generic;
 using Windows.Storage.Streams;
-using Windows.UI.Xaml.Controls;
-using Windows.Devices.Bluetooth.Advertisement;
 
 namespace ExciteOMeter.Devices
 {
@@ -48,7 +45,6 @@ namespace ExciteOMeter.Devices
 
         // LabStreamingLayer
         private static LSL_PolarH10 lslPolarH10;
-
 
         /// <summary>
         /// Type of actions to execute in the PMD Control Point
@@ -141,7 +137,7 @@ namespace ExciteOMeter.Devices
                         // Specific Setup for ACC
                         parameters[2] = 0x00;     // SAMPLE_RATE
                         parameters[3] = 0x01;     // array_count(1)
-                        parameters[4] = 0xC8;     // 200Hz - A
+                        parameters[4] = 0xC8;     // 200Hz - A     // 0xC8=200Hz, 0x64=100Hz, 0x32=50Hz, 0x16=25Hz
                         parameters[5] = 0x00;     // 200Hz - B
                         parameters[6] = 0x01;     // RESOLUTION
                         parameters[7] = 0x01;     // array_count(1)
@@ -149,7 +145,7 @@ namespace ExciteOMeter.Devices
                         parameters[9] = 0x00;     // 16bit - B
                         parameters[10] = 0x02;     // RANGE
                         parameters[11] = 0x01;     // array_count(1)
-                        parameters[12] = 0x08;     // 8G - A
+                        parameters[12] = 0x08;     // 8G - A      // 0x08=8G, 0x04=4G, 0x02=2G
                         parameters[13] = 0x00;     // 8G - B
                         break;
                 }
@@ -392,11 +388,11 @@ namespace ExciteOMeter.Devices
         {
             public string stringHex = "";
             public MeasurementType measurementType;
-            public ulong timestamp;
             public FrameType frameType; // Each sample is 3, 6 or 9 bytes?
 
             public int numSamples;      // Samples in
             public string streamString = "";
+            public long timestamp;
 
             public static EcgData ECG = new EcgData();
             public static AccData ACC = new AccData();
@@ -424,14 +420,14 @@ namespace ExciteOMeter.Devices
 
                 stringHex = BitConverter.ToString(data);
                 measurementType = (MeasurementType)data[0];
-                timestamp = BitConverter.ToUInt64(data, 1); // Reads 8 bytes from array
+                timestamp = BitConverter.ToInt64(data, 1); // Reads 8 bytes from array
                 frameType = (FrameType)data[9];
 
                 switch (measurementType)
                 {
                     case MeasurementType.ECG:
                         ECG.UpdateData(data);
-                        numSamples = (data.Length - 10) / 3; // Reduce the header, each sample is 3 bytes
+                        numSamples = ECG.numSamples;
                         break;
                     case MeasurementType.ACC:
                         ACC.UpdateData(data);
@@ -535,7 +531,7 @@ namespace ExciteOMeter.Devices
                 RR.Clear();
 
                 resultString = "";
-        }
+            }
 
             public void UpdateData(byte[] data)
             {
@@ -549,6 +545,9 @@ namespace ExciteOMeter.Devices
                 sensorContact           = (byte)(flagsByte & (0x06));
                 hasEnergyExpenditure    = (flagsByte & (0x08)) != 0;
                 hasRRinterval           = (flagsByte & (0x10)) != 0;
+
+                ushort receivedRR;
+                float parsedRR;
 
                 // Move pointer to read values from specific bytes
                 int offset = 1;
@@ -566,7 +565,16 @@ namespace ExciteOMeter.Devices
 
                 // Send through LSL
                 HR_lsl[0] = (short)HR;
-                lslPolarH10.streamHR.push_sample(HR_lsl);
+                try
+                {
+                    lslPolarH10.streamHR.push_sample(HR_lsl);
+                }
+                catch (Exception e)
+                {
+                    System.Diagnostics.Debug.WriteLine(e.Message);
+                    throw;
+                }
+                
 
 
                 if (hasEnergyExpenditure)
@@ -582,9 +590,7 @@ namespace ExciteOMeter.Devices
                     resultString += $"| RR=";
 
                     // How many RR intervals are sent, used to prellocate array
-                    int numRRSamples = (data.Length - offset - 1) / 2;
-                    ushort receivedRR;
-                    float parsedRR;
+                    // int numRRsamples = (data.Length - offset + 1) / 2;
 
                     while (offset < data.Length)
                     {
@@ -601,7 +607,15 @@ namespace ExciteOMeter.Devices
 
                         // Send through LSL
                         RR_lsl[0] = parsedRR;
-                        lslPolarH10.streamRRi.push_sample(RR_lsl);
+                        try
+                        {
+                            lslPolarH10.streamRRi.push_sample(RR_lsl);
+                        }
+                        catch (Exception e)
+                        {
+                            System.Diagnostics.Debug.WriteLine(e.Message);
+                            throw;
+                        }
                     }
                 }
             }
@@ -635,12 +649,22 @@ namespace ExciteOMeter.Devices
         /// </summary>
         public class EcgData
         {
-            public struct EcgSample
-            {
-                public int microVolts; // Samples in signed microvolts
-            }
+            //public struct EcgSample
+            //{
+            //    public int microVolts; // Samples in signed microvolts
+            //}
 
-            public List<EcgSample> ecgSamples = new List<EcgSample>();
+            public List<int> ecgSamples = new List<int>();   // Samples in microVolts
+            private int lastReceivedSample;
+            public long timestamp;      // Last sample in the last block received
+
+            // LSL setup
+            public bool isStreamConfigured = false;
+            public int chunkSizeConfigured = 0;
+            public int[,] ECG_lsl;
+
+            public int numSamples = 0;
+            int offset = 0, counter=0; //offset is to read HEX values from input, counter is to write in LSL buffer
 
             public EcgData()
             {
@@ -650,6 +674,7 @@ namespace ExciteOMeter.Devices
             private void SetDefaultValues()
             {
                 ecgSamples.Clear();
+                timestamp = 0; //timestamp of the last sample in nS
             }
 
             public void UpdateData(byte[] data)
@@ -657,18 +682,36 @@ namespace ExciteOMeter.Devices
                 // Restart values before setting new values
                 SetDefaultValues();
 
-                int offset = 10; // Variable to keep track of where to read the byte array
+                timestamp = BitConverter.ToInt64(data, 1); // Reads 8 bytes from array
 
+                offset = 10; // Variable to keep track of where to read the byte array
+
+                numSamples = (data.Length - offset + 1) / 3; // 3 Bytes each sample from ECG
+
+                if(!isStreamConfigured)
+                {
+                    lslPolarH10.SetupStreamOutlet(LSL_PolarH10.MEASUREMENT_STREAM.ECG, numSamples);
+                    chunkSizeConfigured = numSamples;
+                    isStreamConfigured = true;
+                    ECG_lsl = new int[1,chunkSizeConfigured];
+                    System.Diagnostics.Debug.WriteLine($"ECG Stream LSL configured as {chunkSizeConfigured}");
+                }
+                else if (chunkSizeConfigured != numSamples)
+                {
+                    System.Diagnostics.Debug.WriteLine($"ECG Stream LSL: Variable chunk size, configured as {chunkSizeConfigured} and now received {numSamples}");
+                }
+
+                counter = 0; // LSL buffer index
                 while (offset < data.Length)
                 {
-                    EcgSample sample = new EcgSample();
-
                     // Take only three bytes and put it in a four-byte-long array
                     byte[] value = new byte[] { 0x00, data[offset], data[offset+1], data[offset+2] };
-                    sample.microVolts = BitConverter.ToInt32(value, 0);
-                    offset += 3; // Every sample is 3-Bytes
+                    lastReceivedSample = BitConverter.ToInt32(value, 0);
 
-                    ecgSamples.Add(sample);
+                    ECG_lsl[0,counter++] = lastReceivedSample;
+                    ecgSamples.Add(lastReceivedSample);
+
+                    offset += 3; // Every sample is 3-Bytes
 
                     // Print results
                     //text += $"{sample.microVolts},";
@@ -676,7 +719,16 @@ namespace ExciteOMeter.Devices
                 }
 
                 /// SEND DATA THROUGH LSL
-                //TODO!!
+                if (isStreamConfigured)
+                    try
+                    {
+                        lslPolarH10.streamECG.push_chunk(ECG_lsl,timestamp);
+                    }
+                    catch (Exception e)
+                    {
+                        System.Diagnostics.Debug.WriteLine(e.Message);
+                        throw;
+                    }
             }
         }
 
@@ -698,8 +750,22 @@ namespace ExciteOMeter.Devices
                     this.z = z;
                 }
             }
+
+            private readonly int NUM_AXES = 3;
             public int numSamples = 0;
+            long timestamp;
+            int step;
+            int offset = 0, counter=0; //offset is to read HEX values from input, counter is to write in LSL buffer
+
             public List<AccSample> accSamples = new List<AccSample>();
+
+            // Intermediate variables to parse HEX data
+            int x = 0, y = 0, z = 0;
+
+            // LSL setup
+            public bool isStreamConfigured = false;
+            public int chunkSizeConfigured = 0;
+            public int[,] ACC_lsl;
 
             public AccData()
             {
@@ -709,6 +775,7 @@ namespace ExciteOMeter.Devices
             private void SetDefaultValues()
             {
                 numSamples = 0;
+                timestamp = 0;
                 accSamples.Clear();
             }
 
@@ -717,21 +784,33 @@ namespace ExciteOMeter.Devices
                 // Restart values before setting new values
                 SetDefaultValues();
 
-                int offset = 9; // Variable to keep track of where to read the byte array
+                timestamp = BitConverter.ToInt64(data, 1); // Reads 8 bytes from array
+
+                offset = 9; // Variable to keep track of where to read the byte array
                 FrameType type = (FrameType)data[offset]; // Encoded in 3, 6 or 9 bytes
                 offset++;
 
                 // Step: How many bytes to move to find other axis data.
-                int step = (int)type + 1; // If type=1(16-bit), next value is 2 bytes away.
-                numSamples = (data.Length - 10) / (step*3); // Reduce the header, each sample is 3 bytes
+                step = (int)type + 1; // If type=1(16-bit), next value is 2 bytes away.
+                numSamples = (data.Length - offset + 1) / (step*3); // Distance to next sample = step-Bytes*3-axis
+
+                if (!isStreamConfigured)
+                {
+                    lslPolarH10.SetupStreamOutlet(LSL_PolarH10.MEASUREMENT_STREAM.ACC, numSamples);
+                    chunkSizeConfigured = numSamples;
+                    isStreamConfigured = true;
+                    ACC_lsl = new int[NUM_AXES, chunkSizeConfigured];
+                    System.Diagnostics.Debug.WriteLine($"ACC Stream LSL configured as {chunkSizeConfigured}");
+                }
+                else if (chunkSizeConfigured != numSamples)
+                {
+                    System.Diagnostics.Debug.WriteLine($"ACC Stream LSL: Variable chunk size, configured as {chunkSizeConfigured} and now received {numSamples}");
+                }
 
                 // Print Debug text
-                string text = "Samples: ";
-                
-                // Intermediate variables to parse HEX data
-                int x=0, y=0, z=0;
-                byte[] value;
+                //string text = "Samples: ";
 
+                counter = 0; // LSL buffer index
                 while (offset < data.Length)
                 {
                     // Read specific number of bytes
@@ -754,6 +833,7 @@ namespace ExciteOMeter.Devices
                             offset += step;
                             break;
                         case FrameType.T9_BYTES:
+                            byte[] value;
                             value = new byte[] { 0x00, data[offset], data[offset + 1], data[offset + 2] };
                             x = BitConverter.ToInt32(value, 0);
                             offset += step;
@@ -768,12 +848,29 @@ namespace ExciteOMeter.Devices
 
                     accSamples.Add(new AccSample(x,y,z));
 
+                    // Save in the array to be sent to LSL
+                    ACC_lsl[0, counter] = x;
+                    ACC_lsl[1, counter] = y;
+                    ACC_lsl[2, counter] = z;
+                    counter++;
+
                     // Print results
-                    text += $"{x}|{y}|{z},";
+                    //text += $"{x}|{y}|{z},";
                 }
 
                 /// SEND DATA THROUGH LSL
-                System.Diagnostics.Debug.WriteLine(text);
+                if (isStreamConfigured)
+                    try
+                    {
+                        lslPolarH10.streamACC.push_chunk(ACC_lsl, timestamp);
+                    }
+                    catch (Exception e)
+                    {
+                        System.Diagnostics.Debug.WriteLine(e.Message);
+                        throw;
+                    }
+
+                //System.Diagnostics.Debug.WriteLine(text);
             }
         }
 

@@ -112,18 +112,15 @@
     <Compile Include="$(SharedContentDir)\cs\AssemblyInfo.cs">
       <Link>Properties\AssemblyInfo.cs</Link>
     </Compile>
-    <Compile Include="Devices\BLE_PolarH10.cs" />
+    <Compile Include="Devices\PolarH10\BLE_PolarH10.cs" />
     <Compile Include="Constants.cs" />
-    <Compile Include="Devices\LSL_PolarH10.cs" />
+    <Compile Include="Devices\PolarH10\LSL_PolarH10.cs" />
     <Compile Include="DisplayHelpers.cs" />
-    <Compile Include="LSL.cs" />
+    <Compile Include="LSL\LSL.cs" />
     <Compile Include="PresentationFormats.cs" />
     <Compile Include="SampleConfiguration.cs" />
     <Compile Include="Scenario1_Discovery.xaml.cs">
       <DependentUpon>Scenario1_Discovery.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Scenario3_ServerForeground.xaml.cs">
-      <DependentUpon>Scenario3_ServerForeground.xaml</DependentUpon>
     </Compile>
     <Compile Include="Scenario2_Client.xaml.cs">
       <DependentUpon>Scenario2_Client.xaml</DependentUpon>
@@ -158,10 +155,6 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Scenario2_Client.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Scenario3_ServerForeground.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -242,8 +235,8 @@
     <Content Include="Assets\WideTile.scale-150.png" />
     <Content Include="Assets\WideTile.scale-200.png" />
     <Content Include="Assets\WideTile.scale-400.png" />
-    <Content Include="liblsl32.dll" />
-    <Content Include="liblsl64.dll" />
+    <Content Include="LSL\dll\liblsl32.dll" />
+    <Content Include="LSL\dll\liblsl64.dll" />
     <Content Include="Media\exciteometer_logo.png" />
     <None Include="Package.StoreAssociation.xml" />
   </ItemGroup>
@@ -255,6 +248,7 @@
   <ItemGroup>
     <None Include="BluetoothLE_TemporaryKey.pfx" />
   </ItemGroup>
+  <ItemGroup />
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '14.0' ">
     <VisualStudioVersion>14.0</VisualStudioVersion>
   </PropertyGroup>
@@ -264,34 +258,40 @@
   <Target Name="BeforeBuild">
     <!-- Add LSL libraries conditionally depending on the Platform -->
     <ItemGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|ARM' ">
-      <Content Include="liblsl32.dll">
+      <ContentWithTargetPath Include="LSL\dll\liblsl32.dll">
+        <TargetPath>liblsl32.dll</TargetPath>
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Content>
+      </ContentWithTargetPath>
     </ItemGroup>
     <ItemGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|ARM' ">
-      <Content Include="liblsl32.dll">
+      <ContentWithTargetPath Include="LSL\dll\liblsl32.dll">
+        <TargetPath>liblsl32.dll</TargetPath>
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Content>
+      </ContentWithTargetPath>
     </ItemGroup>
     <ItemGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x64' ">
-      <Content Include="liblsl64.dll">
+      <ContentWithTargetPath Include="LSL\dll\liblsl64.dll">
+        <TargetPath>liblsl64.dll</TargetPath>
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Content>
+      </ContentWithTargetPath>
     </ItemGroup>
     <ItemGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x64' ">
-      <Content Include="liblsl64.dll">
+      <ContentWithTargetPath Include="LSL\dll\liblsl64.dll">
+        <TargetPath>liblsl64.dll</TargetPath>
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Content>
+      </ContentWithTargetPath>
     </ItemGroup>
     <ItemGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
-      <Content Include="liblsl32.dll">
+      <ContentWithTargetPath Include="LSL\dll\liblsl32.dll">
+        <TargetPath>liblsl32.dll</TargetPath>
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Content>
+      </ContentWithTargetPath>
     </ItemGroup>
     <ItemGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
-      <Content Include="liblsl32.dll">
+      <ContentWithTargetPath Include="LSL\dll\liblsl32.dll">
+        <TargetPath>liblsl32.dll</TargetPath>
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Content>
+      </ContentWithTargetPath>
     </ItemGroup>
   </Target>
   <!-- 
