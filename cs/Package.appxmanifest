@@ -9,7 +9,7 @@
     <Identity
       Name="10247LuisQuintero.ExciteOMeter"
       Publisher="CN=7703E1C0-E518-4548-A39C-C666C305041D"
-      Version="0.2.3.0" />
+      Version="0.2.6.0" />
 
     <mp:PhoneIdentity PhoneProductId="830c045a-acdc-4db1-8e18-e458e31877d6" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
@@ -30,7 +30,7 @@
     <Applications>
         <Application Id="BluetoothLE.App"
           Executable="$targetnametoken$.exe"
-          EntryPoint="BluetoothLE.App">
+          EntryPoint="ExciteOMeter.App">
             <uap:VisualElements
               DisplayName="ExciteOMeter-Devices"
               Square150x150Logo="Assets\squareTile-sdk.png"
