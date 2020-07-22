@@ -48,8 +48,8 @@ namespace ExciteOMeter.Devices
         private void InitializeComponents()
         {        
             // Heart Rate
-            streamInfoHR = new liblsl.StreamInfo("Heart Rate",                     // Name
-                                                "Markers",                         // Type
+            streamInfoHR = new liblsl.StreamInfo("HeartRate",                      // Name
+                                                "ExciteOMeter",                    // Type
                                                 1,                                 // Channels
                                                 liblsl.IRREGULAR_RATE,             // Sampling Rate (Hz)
                                                 liblsl.channel_format_t.cf_int16,  // Format
@@ -57,24 +57,24 @@ namespace ExciteOMeter.Devices
             
 
             // RR-interval
-            streamInfoRRi = new liblsl.StreamInfo("RR interval",                   // Name
-                                                "Markers",                         // Type
+            streamInfoRRi = new liblsl.StreamInfo("RRinterval",                    // Name
+                                                "ExciteOMeter",                    // Type
                                                 1,                                 // Channels
                                                 liblsl.IRREGULAR_RATE,             // Sampling Rate (Hz)
                                                 liblsl.channel_format_t.cf_float32,// Format
                                                 deviceId);                         // Source ID (serial number) to identify source
 
             // ECG
-            streamInfoECG = new liblsl.StreamInfo("Raw ECG",
-                                                "EEG",
+            streamInfoECG = new liblsl.StreamInfo("RawECG",
+                                                "ExciteOMeter",
                                                 1,
                                                 liblsl.IRREGULAR_RATE,
                                                 liblsl.channel_format_t.cf_int32,   // 3B ECG microVolts
                                                 deviceId);
 
             // ACC
-            streamInfoACC = new liblsl.StreamInfo("Raw Accelerometer",
-                                                "EEG",  
+            streamInfoACC = new liblsl.StreamInfo("RawACC",
+                                                "ExciteOMeter",  
                                                 3,                                  // X-Y-Z axes
                                                 liblsl.IRREGULAR_RATE,
                                                 liblsl.channel_format_t.cf_int32,   // Each axis can be 24-bit
