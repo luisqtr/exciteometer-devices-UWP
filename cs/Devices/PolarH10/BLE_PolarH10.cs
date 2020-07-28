@@ -744,7 +744,7 @@ namespace ExciteOMeter.Devices
                 while (offset < data.Length)
                 {
                     // Take only three bytes and put it in a four-byte-long array
-                    value = new byte[] { data[offset], data[offset+1], data[offset+2], 0x00};
+                    value = new byte[] { 0x00, data[offset], data[offset+1], data[offset+2]};
                     lastReceivedSample = BitConverter.ToInt32(value, 0);
 
                     ECG_lsl[0,counter++] = lastReceivedSample;
