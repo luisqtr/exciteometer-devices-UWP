@@ -703,6 +703,8 @@ namespace ExciteOMeter.Devices
             public int numSamples = 0;
             int offset = 0, counter=0; //offset is to read HEX values from input, counter is to write in LSL buffer
 
+            byte[] value; // Temp for type conversion
+
             public EcgData()
             {
                 SetDefaultValues();
@@ -742,7 +744,7 @@ namespace ExciteOMeter.Devices
                 while (offset < data.Length)
                 {
                     // Take only three bytes and put it in a four-byte-long array
-                    byte[] value = new byte[] { 0x00, data[offset], data[offset+1], data[offset+2] };
+                    value = new byte[] { data[offset], data[offset+1], data[offset+2], 0x00};
                     lastReceivedSample = BitConverter.ToInt32(value, 0);
 
                     ECG_lsl[0,counter++] = lastReceivedSample;
@@ -803,6 +805,8 @@ namespace ExciteOMeter.Devices
             public bool isStreamConfigured = false;
             public int chunkSizeConfigured = 0;
             public int[,] ACC_lsl;
+
+            byte[] value; // Temp for type conversion
 
             public AccData()
             {
@@ -870,14 +874,13 @@ namespace ExciteOMeter.Devices
                             offset += step;
                             break;
                         case FrameType.T9_BYTES:
-                            byte[] value;
-                            value = new byte[] { 0x00, data[offset], data[offset + 1], data[offset + 2] };
+                            value = new byte[] { data[offset], data[offset + 1], ((byte)(data[offset + 2] & 0x7F)), (byte)(0x80 & data[offset + 2]) }; // Extract sign from 24 bits
                             x = BitConverter.ToInt32(value, 0);
                             offset += step;
-                            value = new byte[] { 0x00, data[offset], data[offset + 1], data[offset + 2] };
+                            value = new byte[] { data[offset], data[offset + 1], ((byte)(data[offset + 2] & 0x7F)), (byte)(0x80 & data[offset + 2]) }; // Extract sign from 24 bits
                             y = BitConverter.ToInt32(value, 0);
                             offset += step;
-                            value = new byte[] { 0x00, data[offset], data[offset + 1], data[offset + 2] };
+                            value = new byte[] { data[offset], data[offset + 1], ((byte)(data[offset + 2] & 0x7F)), (byte)(0x80 & data[offset + 2]) }; // Extract sign from 24 bits
                             z = BitConverter.ToInt32(value, 0);
                             offset += step;
                             break;
