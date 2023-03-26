@@ -3,23 +3,17 @@
 ## Dev
 
 Source code of the project Excite-O-Meter.
-Tried to publish on https://www.microsoft.com/store/apps/9PFMNFQJB99Q but it was not approved when LSL was included.
+Published on https://www.microsoft.com/store/apps/9PFMNFQJB99Q
 
 To create another build of the project go to `Project`>`Publish`>`Create App Packages`
 
 The project is associated to the project in the Microsoft Partner Center, and the generated file `bundle.msixupload` should be checked by the Microsoft Cert Kit and then uploaded for publishing.
 
+The codes to automatically upload the build are in a folder `_private_package_certificate` not pushed to github.
+
 *Developed in Visual Studio 2022 Community Edition*
 
-## LibLSL
 
-Since the LSL library uses API that are not compatible with UWP it needed to be recompiled using this [reference](https://docs.microsoft.com/en-us/cpp/porting/how-to-use-existing-cpp-code-in-a-universal-windows-platform-app?view=vs-2019).
-
-After generating the project in CMake for VS2022, it is necessary to:
-- Add to the compiler options in `Properties>C/C++>Command Line` the following options to check compatibility with UWP: `/ZW:platform.winmd /EHsc`
-- Add the linker options in `Properties>Linker>Command Line`: `/SAFESEH /DYNAMICBASE /NXCOMPAT /APPCONTAINER`
-
-Adding the flag `/ZW` as suggested by the tutorial was not necessary, the workaround was found [here](https://docs.microsoft.com/en-us/cpp/build/reference/zw-windows-runtime-compilation?view=vs-2019)
 
 ## Related topics
 
@@ -63,3 +57,17 @@ The next steps depend on whether you just want to deploy the sample or you want 
 ### Deploying and running the sample
 
 - To debug the sample and then run it, press F5 or select Debug >  Start Debugging. To run the sample without debugging, press Ctrl+F5 or selectDebug > Start Without Debugging. 
+
+---
+
+## Previous errors with LibLSL in WIndows store
+
+(Fixed on 2023-03-26, the bundle passes the tests with LSL.dll)
+
+Since the LSL library uses API that are not compatible with UWP it needed to be recompiled using this [reference](https://docs.microsoft.com/en-us/cpp/porting/how-to-use-existing-cpp-code-in-a-universal-windows-platform-app?view=vs-2019).
+
+After generating the project in CMake for VS2022, it is necessary to:
+- Add to the compiler options in `Properties>C/C++>Command Line` the following options to check compatibility with UWP: `/ZW:platform.winmd /EHsc`
+- Add the linker options in `Properties>Linker>Command Line`: `/SAFESEH /DYNAMICBASE /NXCOMPAT /APPCONTAINER`
+
+Adding the flag `/ZW` as suggested by the tutorial was not necessary, the workaround was found [here](https://docs.microsoft.com/en-us/cpp/build/reference/zw-windows-runtime-compilation?view=vs-2019)
