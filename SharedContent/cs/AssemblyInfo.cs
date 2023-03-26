@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("ExciteOMeter")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription("Middleware for PolarH10 to stream data in LSL protocol")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("XR4ALL")]
 [assembly: AssemblyProduct("ExciteOMeter")]
