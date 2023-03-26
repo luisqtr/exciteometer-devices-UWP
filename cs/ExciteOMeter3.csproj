@@ -3,13 +3,12 @@
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <SharedContentDir>$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), LICENSE))\SharedContent</SharedContentDir>
-    <PackageCertificateThumbprint>
-    </PackageCertificateThumbprint>
-    <PackageCertificateKeyFile>ExciteOMeter_TemporaryKey.pfx</PackageCertificateKeyFile>
+    <PackageCertificateThumbprint>D991AA86B320F3301F118BD12E18967B4C04ACAD</PackageCertificateThumbprint>
+    <PackageCertificateKeyFile />
     <AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
     <GenerateAppInstallerFile>False</GenerateAppInstallerFile>
     <AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
-    <AppxAutoIncrementPackageRevision>False</AppxAutoIncrementPackageRevision>
+    <AppxAutoIncrementPackageRevision>True</AppxAutoIncrementPackageRevision>
     <GenerateTestArtifacts>True</GenerateTestArtifacts>
     <AppxBundle>Auto</AppxBundle>
     <AppxBundlePlatforms>x86</AppxBundlePlatforms>
@@ -169,6 +168,24 @@
     <Content Include="$(SharedContentDir)\cs\Default.rd.xml">
       <Link>Properties\Default.rd.xml</Link>
     </Content>
+    <Content Include="D:\Ludwig\Empresas\GIT-repos\XR4ALL\ExciteOMeter-Devices_Windows\SharedContent\media\microsoft-sdk.png">
+      <Link>Assets\microsoft-sdk.png</Link>
+    </Content>
+    <Content Include="D:\Ludwig\Empresas\GIT-repos\XR4ALL\ExciteOMeter-Devices_Windows\SharedContent\media\smalltile-sdk.png">
+      <Link>Assets\smallTile-sdk.png</Link>
+    </Content>
+    <Content Include="D:\Ludwig\Empresas\GIT-repos\XR4ALL\ExciteOMeter-Devices_Windows\SharedContent\media\splash-sdk.png">
+      <Link>Assets\splash-sdk.png</Link>
+    </Content>
+    <Content Include="D:\Ludwig\Empresas\GIT-repos\XR4ALL\ExciteOMeter-Devices_Windows\SharedContent\media\squaretile-sdk.png">
+      <Link>Assets\squareTile-sdk.png</Link>
+    </Content>
+    <Content Include="D:\Ludwig\Empresas\GIT-repos\XR4ALL\ExciteOMeter-Devices_Windows\SharedContent\media\storelogo-sdk.png">
+      <Link>Assets\storeLogo-sdk.png</Link>
+    </Content>
+    <Content Include="D:\Ludwig\Empresas\GIT-repos\XR4ALL\ExciteOMeter-Devices_Windows\SharedContent\media\tile-sdk.png">
+      <Link>Assets\tile-sdk.png</Link>
+    </Content>
     <Content Include="Assets\LargeTile.scale-100.png" />
     <Content Include="Assets\LargeTile.scale-125.png" />
     <Content Include="Assets\LargeTile.scale-150.png" />
@@ -221,8 +238,8 @@
     <Content Include="Assets\WideTile.scale-400.png" />
     <Content Include="LSL\dll\liblsl32.dll" />
     <Content Include="Media\exciteometer_logo.png" />
-    <Content Include="Package.StoreAssociation.xml" />
     <None Include="ExciteOMeter_TemporaryKey.pfx" />
+    <None Include="Package.StoreAssociation.xml" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NETCore.UniversalWindowsPlatform">

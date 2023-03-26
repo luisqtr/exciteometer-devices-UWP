@@ -2,19 +2,20 @@
 
 ## Dev
 
-Source code of the project Excite-O-Meter, published on https://www.microsoft.com/store/apps/9PFMNFQJB99Q
+Source code of the project Excite-O-Meter.
+Tried to publish on https://www.microsoft.com/store/apps/9PFMNFQJB99Q but it was not approved when LSL was included.
 
 To create another build of the project go to `Project`>`Publish`>`Create App Packages`
 
 The project is associated to the project in the Microsoft Partner Center, and the generated file `bundle.msixupload` should be checked by the Microsoft Cert Kit and then uploaded for publishing.
 
-*Developed in Visual Studio 2019 Community Edition*
+*Developed in Visual Studio 2022 Community Edition*
 
 ## LibLSL
 
 Since the LSL library uses API that are not compatible with UWP it needed to be recompiled using this [reference](https://docs.microsoft.com/en-us/cpp/porting/how-to-use-existing-cpp-code-in-a-universal-windows-platform-app?view=vs-2019).
 
-After generating the project in CMake for VS2019, it is necessary to:
+After generating the project in CMake for VS2022, it is necessary to:
 - Add to the compiler options in `Properties>C/C++>Command Line` the following options to check compatibility with UWP: `/ZW:platform.winmd /EHsc`
 - Add the linker options in `Properties>Linker>Command Line`: `/SAFESEH /DYNAMICBASE /NXCOMPAT /APPCONTAINER`
 
