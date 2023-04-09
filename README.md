@@ -1,18 +1,18 @@
 # Excite-O-Meter
 
-## Dev
+Source code of the Universal Windows Platform (UWP) application for the [Excite-O-Meter](https://github.com/luisqtr/exciteometer)
 
-Source code of the project Excite-O-Meter.
-Published on https://www.microsoft.com/store/apps/9PFMNFQJB99Q
+- App published on https://www.microsoft.com/store/apps/9PFMNFQJB99Q
+
+This repo is a mirror that allows building a local copy enabling developer mode.
+
+## Publishing
 
 To create another build of the project go to `Project`>`Publish`>`Create App Packages`
 
 The project is associated to the project in the Microsoft Partner Center, and the generated file `bundle.msixupload` should be checked by the Microsoft Cert Kit and then uploaded for publishing.
 
-The codes to automatically upload the build are in a folder `_private_package_certificate` not pushed to github.
-
 *Developed in Visual Studio 2022 Community Edition*
-
 
 
 ## Related topics
@@ -60,7 +60,7 @@ The next steps depend on whether you just want to deploy the sample or you want 
 
 ---
 
-## Previous errors with LibLSL in WIndows store
+## Previous errors with LibLSL in Windows store
 
 (Fixed on 2023-03-26, the bundle passes the tests with LSL.dll)
 
