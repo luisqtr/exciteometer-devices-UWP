@@ -14,6 +14,9 @@ The project is associated to the project in the Microsoft Partner Center, and th
 
 *Developed in Visual Studio 2022 Community Edition*
 
+## Contributing
+
+If you make a contribution on the repository, please make a Pull Request so I can sign a new build and update the application in the Windows Store.
 
 ## Related topics
 
