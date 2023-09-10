@@ -840,7 +840,7 @@ namespace ExciteOMeter.Devices
                     LSL_PolarH10.OpenStreamOutlet(LSL_PolarH10.MEASUREMENT_STREAM.ACC, numSamples);
                     chunkSizeConfigured = numSamples;
                     isStreamConfigured = true;
-                    ACC_lsl = new int[NUM_AXES, chunkSizeConfigured];
+                    ACC_lsl = new int[chunkSizeConfigured, NUM_AXES];
                     System.Diagnostics.Debug.WriteLine($"ACC Stream LSL configured as {chunkSizeConfigured}");
                 }
                 else if (chunkSizeConfigured != numSamples)
@@ -889,11 +889,10 @@ namespace ExciteOMeter.Devices
                     accSamples.Add(new AccSample(x,y,z));
 
                     // Save in the array to be sent to LSL
-                    ACC_lsl[0, counter] = x;
-                    ACC_lsl[1, counter] = y;
-                    ACC_lsl[2, counter] = z;
+                    ACC_lsl[counter, 0] = x;
+                    ACC_lsl[counter, 1] = y;
+                    ACC_lsl[counter, 2] = z;
                     counter++;
-
                 }
 
                 /// SEND DATA THROUGH LSL

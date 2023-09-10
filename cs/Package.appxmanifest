@@ -9,7 +9,7 @@
     <Identity
       Name="10247LuisQuintero.ExciteOMeter"
       Publisher="CN=7703E1C0-E518-4548-A39C-C666C305041D"
-      Version="0.4.1.0" />
+      Version="1.0.7.0" />
 
     <mp:PhoneIdentity PhoneProductId="830c045a-acdc-4db1-8e18-e458e31877d6" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
@@ -38,7 +38,7 @@
               Description="ExciteOMeter allows the connection of Bluetooth LE devices to collect physiological signals. All data packages are sent to the local network using LabStreamingLayer (LSL). COMPATIBLE DEVICE: 1) Polar H10 chest strap to collect HR, RR-interval, ECG (130Hz) and Accelerometer (200Hz)."
               BackgroundColor="#00b2f0">
                 <uap:SplashScreen Image="Assets\Splash-sdk.png" />
-                <uap:DefaultTile Square71x71Logo="Assets\SmallTile.png" Wide310x150Logo="Assets\WideTile.png" Square310x310Logo="Assets\LargeTile.png">
+                <uap:DefaultTile Square71x71Logo="Assets\SmallTile.png" Wide310x150Logo="Assets\WideTile.png" Square310x310Logo="Assets\LargeTile.png" ShortName="EoM-Devices">
                     <uap:ShowNameOnTiles>
                         <uap:ShowOn Tile="square150x150Logo" />
                     </uap:ShowNameOnTiles>
