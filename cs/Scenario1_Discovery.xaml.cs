@@ -335,7 +335,7 @@ namespace ExciteOMeter
 
             Debug.WriteLine($"bleDeviceDisplay.Id = {bleDeviceDisplay.Id}\nbleDeviceDisplay.Name = {bleDeviceDisplay.Name}");
 
-            if(bleDeviceDisplay.Name.StartsWith("Polar H10"))
+            if(bleDeviceDisplay.Name.StartsWith("Polar"))
             {
                 // Open Page to connect to Polar H10
                 MainPage.Current.OpenSetupForPolarH10();
@@ -343,7 +343,10 @@ namespace ExciteOMeter
             else
             {
                 // Open normal connection to BLE Server
-                MainPage.Current.OpenSetupConnectToServer();
+                rootPage.NotifyUser($"Note that this application only works with BLE Polar devices like Polar H10 or OH1...", NotifyType.StatusMessage);
+
+                //// This scenario was disabled to avoid crashes
+                //MainPage.Current.OpenSetupConnectToServer();
             }
 
             isBusy = false;

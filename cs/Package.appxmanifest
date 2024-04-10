@@ -8,8 +8,8 @@
 
     <Identity
       Name="10247LuisQuintero.ExciteOMeter"
-      Publisher="CN=7703E1C0-E518-4548-A39C-C666C305041D"
-      Version="1.0.7.0" />
+      Publisher="CN=10247LuisQuintero"
+      Version="1.0.8.0" />
 
     <mp:PhoneIdentity PhoneProductId="830c045a-acdc-4db1-8e18-e458e31877d6" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 

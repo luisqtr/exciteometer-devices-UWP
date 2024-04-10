@@ -91,16 +91,16 @@ namespace ExciteOMeter
         public void OpenSetupForPolarH10()
         {
             // Index of the page that contains the setup for Polar
-            ScenarioControl.SelectedIndex = 2;
-        }
-
-        /// <summary>
-        /// Open Next Page
-        /// </summary>
-        public void OpenSetupConnectToServer()
-        {
             ScenarioControl.SelectedIndex = 1;
         }
+
+        ///// <summary>
+        ///// Open Next Page - This scenario was disabled to avoid crashes.
+        ///// </summary>
+        //public void OpenSetupConnectToServer()
+        //{
+        //    ScenarioControl.SelectedIndex = 2;
+        //}
 
         public List<Scenario> Scenarios
         {
