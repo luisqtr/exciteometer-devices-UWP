@@ -2,7 +2,7 @@
 
 Source code of the Universal Windows Platform (UWP) application for the [Excite-O-Meter](https://github.com/luisqtr/exciteometer)
 
-- App published on https://www.microsoft.com/store/apps/9PFMNFQJB99Q
+- App published on https://www.microsoft.com/store/apps/9NW9MSXHTQ5M
 
 This repo is a mirror that allows building a local copy enabling developer mode.
 
