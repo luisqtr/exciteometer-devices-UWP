@@ -76,8 +76,8 @@ Initially, the Excite-O-Meter Devices UWP needed to run in a different machine t
 A workaround for this problem that lets you run EoM-devices and EoM-Unity in the same device is to open a PowerShell terminal with **admin** priviledged and run:
 
 ```
-> CheckNetIsolation LoopbackExempt -a -n="10247LuisQuintero.ExciteOMeter_k7zc7t0y9176w"
-> CheckNetIsolation LoopbackExempt -is -n="10247LuisQuintero.ExciteOMeter_k7zc7t0y9176w"
+> CheckNetIsolation LoopbackExempt -a -n="10247LuisQuintero.Excite-O-Meter_k7zc7t0y9176w"
+> CheckNetIsolation LoopbackExempt -is -n="10247LuisQuintero.Excite-O-Meter_k7zc7t0y9176w"
 ```
 
 *NOTE*: The PowerShell console needs to stay open all the time, the loopback restriction will be enforced once this terminal window is closed.
@@ -85,7 +85,7 @@ A workaround for this problem that lets you run EoM-devices and EoM-Unity in the
 If the Excite-O-Meter was not installed from the store, the PackageName may differ. Follow these steps to find the package name in your PC and run the loopback exemption
 
 - Open a Powershell Terminal
-- Run `$ Get-AppxPackage 10247LuisQuintero.ExciteOMeter`
+- Run `$ Get-AppxPackage 10247LuisQuintero.Excite-O-Meter`
 - Copy the value in `PackageFamilyName`
 - Repeat the commands above `CheckNetIsolation` replacing the package name with the new value.
 

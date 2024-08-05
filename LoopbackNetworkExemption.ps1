@@ -18,5 +18,5 @@ if ((Test-Admin) -eq $false)  {
 'This application allows sending LSL streams to the same PC where the EoM is running'
 '... Please keep this window open for as long as you want to use the Excite-O-Meter Devices'
 
-CheckNetIsolation LoopbackExempt -a -n="10247LuisQuintero.ExciteOMeter_k7zc7t0y9176w"
-CheckNetIsolation LoopbackExempt -is -n="10247LuisQuintero.ExciteOMeter_k7zc7t0y9176w"
+CheckNetIsolation LoopbackExempt -a -n="10247LuisQuintero.Excite-O-Meter_k7zc7t0y9176w"
+CheckNetIsolation LoopbackExempt -is -n="10247LuisQuintero.Excite-O-Meter_k7zc7t0y9176w"
